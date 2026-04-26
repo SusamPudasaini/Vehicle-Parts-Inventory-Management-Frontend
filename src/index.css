@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --purple-50: #f5f3ff;
+  --purple-100: #ede9fe;
+  --purple-200: #ddd6fe;
+  --purple-400: #a78bfa;
+  --purple-500: #8b5cf6;
+  --purple-600: #7c3aed;
+  --purple-700: #6d28d9;
+  --purple-800: #5b21b6;
+  --purple-900: #4c1d95;
+  --purple-950: #2e1065;
+  --accent: #c084fc;
+  --surface: #faf9ff;
+  --border: #e8e4f8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--surface);
+  color: #1a1523;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--purple-200); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--purple-400); }
+
+/* Transitions */
+* { transition-property: color, background-color, border-color, opacity, box-shadow; transition-duration: 150ms; }
