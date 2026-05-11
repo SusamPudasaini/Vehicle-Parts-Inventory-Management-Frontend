@@ -48,3 +48,20 @@ export const customerApi = {
   register: (data) => request("/customer", { method: "POST", body: JSON.stringify(data) }),
   search: (q) => request(`/customer/search?q=${encodeURIComponent(q)}`),
 };
+
+// ── Appointments / Requests / Reviews ─────────────────────────────────────────
+export const appointmentApi = {
+  getAll: (customerId) => request(`/customer/${customerId}/appointments`),
+  create: (customerId, data) => request(`/customer/${customerId}/appointments`, { method: "POST", body: JSON.stringify(data) }),
+};
+
+export const partRequestApi = {
+  getAll: (customerId) => request(`/customer/${customerId}/requests`),
+  create: (customerId, data) => request(`/customer/${customerId}/requests`, { method: "POST", body: JSON.stringify(data) }),
+};
+
+export const reviewApi = {
+  getAll: (customerId) => request(`/customer/${customerId}/reviews`),
+  create: (customerId, data) => request(`/customer/${customerId}/reviews`, { method: "POST", body: JSON.stringify(data) }),
+};
+

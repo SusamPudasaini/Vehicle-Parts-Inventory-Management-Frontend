@@ -7,6 +7,9 @@ import VendorManagement from "./pages/admin/VendorManagement";
 import RegisterCustomer from "./pages/staff/RegisterCustomer";
 import CustomerList, { SearchCustomers } from "./pages/staff/CustomerList";
 import CustomerDetail from "./pages/staff/CustomerDetail";
+import BookAppointment from "./pages/staff/BookAppointment";
+import RequestPart from "./pages/staff/RequestPart";
+import ReviewService from "./pages/staff/ReviewService";
 
 // Redirect to login if not authenticated
 function PrivateRoute({ children }) {
@@ -51,6 +54,9 @@ function AppRoutes() {
         <Route path="staff/register-customer" element={<RegisterCustomer />} />
         <Route path="staff/customers" element={<CustomerList />} />
         <Route path="staff/customers/:id" element={<CustomerDetail />} />
+        <Route path="staff/customers/:id/book-appointment" element={<BookAppointment />} />
+        <Route path="staff/customers/:id/request-part" element={<RequestPart />} />
+        <Route path="staff/customers/:id/review-service" element={<ReviewService />} />
         <Route path="staff/search" element={<SearchCustomers />} />
       </Route>
 
