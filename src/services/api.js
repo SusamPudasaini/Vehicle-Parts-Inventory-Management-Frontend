@@ -1,4 +1,8 @@
-const BASE_URL = "https://localhost:7193/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+  throw new Error("Missing VITE_API_BASE_URL. Set it in frontend/.env.");
+}
 
 // ── Generic fetch helper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {

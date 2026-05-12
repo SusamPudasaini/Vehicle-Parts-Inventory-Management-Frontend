@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const BASE_URL = "https://localhost:7193/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+  throw new Error("Missing VITE_API_BASE_URL. Set it in frontend/.env.");
+}
 
 export default function Login() {
   const { login } = useAuth();
