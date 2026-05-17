@@ -1,4 +1,4 @@
-// ── Shared UI Components ──────────────────────────────────────────────────────
+//Shared UI Components 
 
 export function PageHeader({ title, subtitle, action }) {
   return (
@@ -280,7 +280,7 @@ export function Alert({ type = "error", message }) {
   );
 }
 
-// ── Table primitives ───────────────────────────────────────────────────────────
+//Table primitives 
 export function Table({ headers, children, empty }) {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
