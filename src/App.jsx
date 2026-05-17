@@ -4,6 +4,9 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import StaffManagement from "./pages/admin/StaffManagement";
 import VendorManagement from "./pages/admin/VendorManagement";
+import PartsManagement from "./pages/admin/PartsManagement";
+import PurchaseInvoices from "./pages/admin/PurchaseInvoices";
+import FinancialReports from "./pages/admin/FinancialReports";
 import RegisterCustomer from "./pages/staff/RegisterCustomer";
 import CustomerList, { SearchCustomers } from "./pages/staff/CustomerList";
 import CustomerDetail from "./pages/staff/CustomerDetail";
@@ -11,20 +14,17 @@ import BookAppointment from "./pages/staff/BookAppointment";
 import RequestPart from "./pages/staff/RequestPart";
 import ReviewService from "./pages/staff/ReviewService";
 
-// Redirect to login if not authenticated
 function PrivateRoute({ children }) {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
 }
 
-// Redirect to correct home if already logged in
 function PublicRoute({ children }) {
   const { user } = useAuth();
   if (!user) return children;
   return <Navigate to={user.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />;
 }
 
-// Only admins can access this route
 function AdminRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -37,10 +37,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-      {/* Protected */}
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={
           <Navigate to={user?.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />
@@ -49,6 +47,9 @@ function AppRoutes() {
         {/* Admin only */}
         <Route path="admin/staff" element={<AdminRoute><StaffManagement /></AdminRoute>} />
         <Route path="admin/vendors" element={<AdminRoute><VendorManagement /></AdminRoute>} />
+        <Route path="admin/parts" element={<AdminRoute><PartsManagement /></AdminRoute>} />
+        <Route path="admin/invoices" element={<AdminRoute><PurchaseInvoices /></AdminRoute>} />
+        <Route path="admin/reports" element={<AdminRoute><FinancialReports /></AdminRoute>} />
 
         {/* Staff + Admin */}
         <Route path="staff/register-customer" element={<RegisterCustomer />} />
@@ -60,7 +61,6 @@ function AppRoutes() {
         <Route path="staff/search" element={<SearchCustomers />} />
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
