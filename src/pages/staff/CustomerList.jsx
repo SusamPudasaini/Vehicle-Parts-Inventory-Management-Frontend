@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus, Search } from "lucide-react";
 import { customerApi } from "../../services/api";
 import { PageHeader, Button, Badge, Card, Spinner, EmptyState, Table, TR, TD } from "../../components/ui";
 
@@ -84,10 +85,7 @@ export function SearchCustomers() {
 
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         <div style={{ position: "relative", flex: 1 }}>
-          <svg style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9d8db8" }}
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
+          <Search size={14} strokeWidth={2.2} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9d8db8" }} />
           <input
             ref={inputRef}
             type="text"
@@ -171,7 +169,7 @@ export default function CustomerList() {
         subtitle="All registered customers and their vehicles"
         action={
           <Button onClick={() => navigate("/staff/register-customer")}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            <Plus size={14} strokeWidth={2.4} />
             Register Customer
           </Button>
         }

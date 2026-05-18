@@ -1,41 +1,44 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { BarChart3, FileText, LogOut, Monitor, Search, UserPlus, Users, Wrench } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import BrandLogo from "./BrandLogo";
+import PageTransition from "./PageTransition";
 
 const adminLinks = [
   {
     to: "/admin/staff", label: "Staff",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    icon: Users,
   },
   {
     to: "/admin/vendors", label: "Vendors",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>,
+    icon: Monitor,
   },
   {
     to: "/admin/parts", label: "Parts",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+    icon: Wrench,
   },
   {
     to: "/admin/invoices", label: "Purchase Invoices",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    icon: FileText,
   },
   {
     to: "/admin/reports", label: "Reports",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    icon: BarChart3,
   },
 ];
 
 const staffLinks = [
   {
     to: "/staff/register-customer", label: "Register Customer",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
+    icon: UserPlus,
   },
   {
     to: "/staff/customers", label: "Customers",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    icon: Users,
   },
   {
     to: "/staff/search", label: "Search",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+    icon: Search,
   },
 ];
 
@@ -60,20 +63,7 @@ export default function Layout() {
       }}>
         {/* Logo */}
         <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{
-              width: "32px", height: "32px",
-              background: "linear-gradient(135deg, var(--purple-500), var(--accent))",
-              borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px", fontWeight: "700", color: "white", flexShrink: 0,
-            }}>
-              VP
-            </div>
-            <div>
-              <p style={{ fontSize: "13px", fontWeight: "600", color: "white", lineHeight: 1.2, margin: 0 }}>VehicleParts</p>
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", lineHeight: 1.2, margin: 0 }}>Management</p>
-            </div>
-          </div>
+          <BrandLogo size={34} />
         </div>
 
         {/* Nav */}
@@ -123,7 +113,7 @@ export default function Layout() {
             onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "white"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(255,255,255,0.45)"; }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <LogOut size={13} strokeWidth={2.2} />
             Sign out
           </button>
         </div>
@@ -132,7 +122,9 @@ export default function Layout() {
       {/* Main */}
       <main style={{ flex: 1, overflowY: "auto" }}>
         <div style={{ maxWidth: "900px", margin: "0 auto", padding: "40px 36px" }}>
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </div>
       </main>
     </div>
@@ -152,7 +144,7 @@ function SectionLabel({ children, style }) {
   );
 }
 
-function SideLink({ to, label, icon }) {
+function SideLink({ to, label, icon: Icon }) {
   return (
     <NavLink
       to={to}
@@ -165,7 +157,9 @@ function SideLink({ to, label, icon }) {
         background: isActive ? "rgba(139,92,246,0.35)" : "transparent",
       })}
     >
-      <span style={{ opacity: 0.8 }}>{icon}</span>
+      <span style={{ opacity: 0.85, display: "flex" }}>
+        <Icon size={16} strokeWidth={2.1} />
+      </span>
       {label}
     </NavLink>
   );

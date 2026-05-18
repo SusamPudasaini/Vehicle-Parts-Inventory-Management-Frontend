@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Plus } from "lucide-react";
 import { PageHeader, Button, Badge, Card, Input, Select, Modal, EmptyState, Spinner, Alert, Table, TR, TD } from "../../components/ui";
 
 const BASE_URL = "https://localhost:7041/api";
@@ -210,7 +211,7 @@ export default function PurchaseInvoices() {
         subtitle="Record stock purchases from vendors"
         action={
           <Button onClick={() => setCreateOpen(true)}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            <Plus size={14} strokeWidth={2.4} />
             New Invoice
           </Button>
         }

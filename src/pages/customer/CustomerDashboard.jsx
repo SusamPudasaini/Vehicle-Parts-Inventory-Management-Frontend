@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { customerProfileApi } from "../../services/api";
 import { Badge, Button, Card, Spinner } from "../../components/ui";
+import BrandLogo from "../../components/BrandLogo";
 
 function StatCard({ label, value, hint }) {
   return (
@@ -130,33 +133,22 @@ export default function CustomerDashboard() {
           gap: "16px",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "8px",
-              background: "linear-gradient(135deg, var(--purple-500), var(--accent))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontWeight: 700,
-              fontSize: "13px",
-            }}>
-              VP
-            </div>
-            <div>
-              <p style={{ color: "white", fontSize: "13px", fontWeight: 600, margin: 0 }}>VehicleParts</p>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "11px", margin: 0 }}>Customer Portal</p>
-            </div>
+            <BrandLogo size={34} subtitle="Customer Portal" />
           </div>
           <Button variant="ghost" onClick={handleLogout} style={{ color: "rgba(255,255,255,0.75)" }}>
+            <LogOut size={14} strokeWidth={2.2} />
             Sign out
           </Button>
         </div>
       </header>
 
       <main style={{ maxWidth: "960px", margin: "0 auto", padding: "36px 24px 48px" }}>
-        <section style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", marginBottom: "28px" }}>
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, ease: "easeOut" }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", marginBottom: "28px" }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{
               width: "56px",
@@ -182,7 +174,7 @@ export default function CustomerDashboard() {
               </p>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {notice && (
           <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", marginBottom: "18px" }}>

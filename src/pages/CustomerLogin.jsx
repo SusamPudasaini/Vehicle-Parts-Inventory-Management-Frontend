@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import BrandLogo from "../components/BrandLogo";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -62,23 +64,14 @@ export default function CustomerLogin() {
         pointerEvents: "none",
       }} />
 
-      <div style={{ width: "100%", maxWidth: "400px", padding: "16px", position: "relative" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+        style={{ width: "100%", maxWidth: "400px", padding: "16px", position: "relative" }}
+      >
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            margin: "0 auto 12px",
-            background: "linear-gradient(135deg, var(--purple-500), var(--accent))",
-            borderRadius: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "18px",
-            fontWeight: "700",
-            color: "white",
-          }}>
-            VP
-          </div>
+          <BrandLogo size={56} showText={false} style={{ justifyContent: "center", marginBottom: "12px" }} />
           <h1 style={{ fontSize: "20px", fontWeight: "600", color: "white", margin: "0 0 4px" }}>
             VehicleParts
           </h1>
@@ -162,7 +155,7 @@ export default function CustomerLogin() {
             Sign in here
           </Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

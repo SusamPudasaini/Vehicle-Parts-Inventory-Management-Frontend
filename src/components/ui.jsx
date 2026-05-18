@@ -1,3 +1,6 @@
+import { AlertCircle, CheckCircle2, PackageOpen, X } from "lucide-react";
+import { motion } from "framer-motion";
+
 //Shared UI Components 
 
 export function PageHeader({ title, subtitle, action }) {
@@ -53,10 +56,11 @@ export function Button({ children, onClick, variant = "primary", type = "button"
   };
 
   return (
-    <button
+    <motion.button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      whileTap={disabled ? undefined : { scale: 0.98 }}
       style={{ ...base, ...variants[variant], ...style }}
       onMouseEnter={(e) => {
         if (disabled) return;
@@ -71,7 +75,7 @@ export function Button({ children, onClick, variant = "primary", type = "button"
       }}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 
@@ -99,7 +103,11 @@ export function Badge({ children, color = "gray" }) {
 
 export function Card({ children, className = "", style = {} }) {
   return (
-    <div style={{
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{
       background: "white",
       borderRadius: "12px",
       border: "1px solid var(--border)",
@@ -108,7 +116,7 @@ export function Card({ children, className = "", style = {} }) {
       ...style,
     }}>
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -216,9 +224,7 @@ export function Modal({ open, onClose, title, children }) {
               display: "flex", alignItems: "center",
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
+            <X size={16} strokeWidth={2.5} />
           </button>
         </div>
         <div style={{ padding: "20px 22px" }}>{children}</div>
@@ -237,9 +243,9 @@ export function EmptyState({ icon, title, description, action }) {
         width: "48px", height: "48px", borderRadius: "12px",
         background: "var(--purple-50)", border: "1px solid var(--purple-100)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "22px", marginBottom: "14px",
+        color: "var(--purple-600)", marginBottom: "14px",
       }}>
-        {icon}
+        {icon || <PackageOpen size={22} strokeWidth={2} />}
       </div>
       <p style={{ fontSize: "14px", fontWeight: "600", color: "#1a1523", margin: "0 0 4px" }}>{title}</p>
       <p style={{ fontSize: "13px", color: "#9d8db8", maxWidth: "260px", margin: "0 0 16px" }}>{description}</p>
@@ -274,7 +280,9 @@ export function Alert({ type = "error", message }) {
       padding: "10px 14px", borderRadius: "8px", fontSize: "13px",
       ...s,
     }}>
-      <span>{type === "error" ? "⚠" : "✓"}</span>
+      <span style={{ display: "flex" }}>
+        {type === "error" ? <AlertCircle size={15} strokeWidth={2.2} /> : <CheckCircle2 size={15} strokeWidth={2.2} />}
+      </span>
       <span>{message}</span>
     </div>
   );
