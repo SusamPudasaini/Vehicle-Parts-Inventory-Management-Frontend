@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import CustomerLogin from "./pages/CustomerLogin";
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import StaffManagement from "./pages/admin/StaffManagement";
 import VendorManagement from "./pages/admin/VendorManagement";
 import PartsManagement from "./pages/admin/PartsManagement";
@@ -14,14 +16,26 @@ import BookAppointment from "./pages/staff/BookAppointment";
 import RequestPart from "./pages/staff/RequestPart";
 import ReviewService from "./pages/staff/ReviewService";
 
-function PrivateRoute({ children }) {
+function StaffRoute({ children }) {
   const { user } = useAuth();
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "Customer") return <Navigate to="/customer/dashboard" replace />;
+  return children;
+}
+
+function CustomerRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/customer-login" replace />;
+  if (user.role !== "Customer") {
+    return <Navigate to={user.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />;
+  }
+  return children;
 }
 
 function PublicRoute({ children }) {
   const { user } = useAuth();
   if (!user) return children;
+  if (user.role === "Customer") return <Navigate to="/customer/dashboard" replace />;
   return <Navigate to={user.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />;
 }
 
@@ -38,8 +52,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/customer-login" element={<PublicRoute><CustomerLogin /></PublicRoute>} />
+      <Route path="/customer/dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
 
-      <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+      <Route path="/" element={<StaffRoute><Layout /></StaffRoute>}>
         <Route index element={
           <Navigate to={user?.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />
         } />

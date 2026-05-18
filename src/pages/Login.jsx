@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -26,6 +26,7 @@ export default function Login() {
     try {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
@@ -156,8 +157,11 @@ export default function Login() {
           </div>
         </div>
 
-        <p style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "rgba(255,255,255,0.2)" }}>
-          CS6004 · Group Project
+        <p style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "rgba(255,255,255,0.35)" }}>
+          Customer?{" "}
+          <Link to="/customer-login" style={{ color: "white", fontWeight: 600, textDecoration: "none" }}>
+            Sign in here
+          </Link>
         </p>
       </div>
     </div>

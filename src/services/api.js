@@ -7,6 +7,7 @@ if (!BASE_URL) {
 // ── Generic fetch helper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...options.headers },
     ...options,
   });
@@ -65,3 +66,9 @@ export const reviewApi = {
   create: (customerId, data) => request(`/customer/${customerId}/reviews`, { method: "POST", body: JSON.stringify(data) }),
 };
 
+export const customerProfileApi = {
+  getProfile: () => request("/customer-profile/profile"),
+  getVehicles: () => request("/customer-profile/vehicles"),
+  getPurchaseHistory: () => request("/customer-profile/purchase-history"),
+  getServiceHistory: () => request("/customer-profile/service-history"),
+};
