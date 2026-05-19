@@ -15,10 +15,125 @@ async function api(path, options = {}) {
 }
 
 function InvoiceDetail({ invoice, onClose }) {
+  const handleDownload = (data) => {
+    if (!data) return;
+    const formatMoney = (value) => Number(value || 0).toLocaleString();
+    const issuedDate = new Date(data.invoiceDate).toLocaleDateString();
+    const itemsRows = data.items
+      .map((item) => `
+        <tr>
+          <td>${item.partName}</td>
+          <td class="muted">${item.partNumber}</td>
+          <td class="right">${item.quantity}</td>
+          <td class="right">Rs. ${formatMoney(item.unitPrice)}</td>
+          <td class="right strong">Rs. ${formatMoney(item.lineTotal)}</td>
+        </tr>
+      `)
+      .join("");
+
+    const html = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Vendor Invoice ${data.invoiceNumber}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: "Segoe UI", Arial, sans-serif; color: #1a1523; margin: 0; padding: 32px; background: #f6f3fb; }
+          .sheet { max-width: 820px; margin: 0 auto; background: white; border: 1px solid #e7e1f3; border-radius: 14px; padding: 28px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+          .title { font-size: 22px; font-weight: 700; margin: 0; }
+          .meta { font-size: 12.5px; color: #6d5d8a; margin-top: 4px; }
+          .tag { display: inline-block; padding: 4px 10px; background: #f3f0fa; color: #6d5d8a; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; }
+          .block h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #9d8db8; }
+          .block p { margin: 0; font-size: 13.5px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+          thead th { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e7e1f3; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #9d8db8; }
+          tbody td { padding: 12px 8px; border-bottom: 1px solid #f1edf9; }
+          .right { text-align: right; }
+          .muted { color: #9d8db8; font-family: "Consolas", "DM Mono", monospace; }
+          .strong { font-weight: 600; color: #5b21b6; }
+          .total { margin-top: 16px; display: flex; justify-content: flex-end; }
+          .total-box { background: #f5f3ff; border: 1px solid #e7e1f3; border-radius: 12px; padding: 12px 18px; text-align: right; }
+          .total-box p { margin: 0; }
+          .total-box .label { font-size: 11px; color: #9d8db8; letter-spacing: 0.06em; text-transform: uppercase; }
+          .total-box .value { font-size: 20px; font-weight: 700; color: #5b21b6; }
+          .notes { margin-top: 18px; font-size: 12.5px; color: #6d5d8a; border-top: 1px dashed #e7e1f3; padding-top: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div class="header">
+            <div>
+              <p class="tag">Vendor Invoice</p>
+              <h1 class="title">${data.invoiceNumber}</h1>
+              <p class="meta">Issued ${issuedDate}</p>
+            </div>
+            <div class="block" style="text-align:right">
+              <h4>Vendor</h4>
+              <p>${data.vendorName}</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="block">
+              <h4>Invoice Date</h4>
+              <p>${issuedDate}</p>
+            </div>
+            <div class="block">
+              <h4>Items</h4>
+              <p>${data.items.length} line item${data.items.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Part</th>
+                <th>Part #</th>
+                <th class="right">Qty</th>
+                <th class="right">Unit Price</th>
+                <th class="right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+            </tbody>
+          </table>
+
+          <div class="total">
+            <div class="total-box">
+              <p class="label">Total</p>
+              <p class="value">Rs. ${formatMoney(data.totalAmount)}</p>
+            </div>
+          </div>
+
+          ${data.notes ? `<div class="notes"><strong>Notes:</strong> ${data.notes}</div>` : ""}
+        </div>
+        <script>
+          window.onload = () => { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
-    <Modal open={!!invoice} onClose={onClose} title={`Invoice ${invoice?.invoiceNumber}`}>
+    <Modal open={!!invoice} onClose={onClose} title={`Vendor Invoice ${invoice?.invoiceNumber}`}>
       {invoice && (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button variant="secondary" onClick={() => handleDownload(invoice)}>
+              Download PDF
+            </Button>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div>
               <p style={{ fontSize: "11px", color: "#9d8db8", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Vendor</p>
@@ -118,7 +233,7 @@ function CreateInvoiceModal({ open, onClose, onCreated }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Create Purchase Invoice">
+    <Modal open={open} onClose={onClose} title="Create Vendor Invoice">
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         <Alert message={error} />
 
@@ -207,19 +322,19 @@ export default function PurchaseInvoices() {
   return (
     <>
       <PageHeader
-        title="Purchase Invoices"
+        title="Vendor Invoices"
         subtitle="Record stock purchases from vendors"
         action={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus size={14} strokeWidth={2.4} />
-            New Invoice
+            New Vendor Invoice
           </Button>
         }
       />
 
       <Card>
         {loading ? <Spinner /> : invoices.length === 0 ? (
-          <EmptyState icon="🧾" title="No invoices yet" description="Create your first purchase invoice to update stock." action={<Button onClick={() => setCreateOpen(true)}>New Invoice</Button>} />
+          <EmptyState icon="🧾" title="No vendor invoices yet" description="Create your first vendor invoice to update stock." action={<Button onClick={() => setCreateOpen(true)}>New Vendor Invoice</Button>} />
         ) : (
           <Table headers={["Invoice #", "Vendor", "Date", "Items", "Total", ""]}>
             {invoices.map((inv) => (

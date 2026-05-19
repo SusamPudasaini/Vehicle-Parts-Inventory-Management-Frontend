@@ -22,23 +22,11 @@ const adminLinks = [
     icon: PackageSearch,
   },
   {
-    to: "/admin/invoices", label: "Purchase Invoices",
+    to: "/admin/invoices", label: "Vendor Invoices",
     icon: FileText,
   },
   {
     to: "/admin/reports", label: "Reports",
-    icon: BarChart3,
-  },
-  {
-    to: "/staff/reviews", label: "Customer Reviews",
-    icon: MessageSquare,
-  },
-  {
-    to: "/staff/invoices", label: "Customer Invoices",
-    icon: Receipt,
-  },
-  {
-    to: "/staff/customer-reports", label: "Customer Reports",
     icon: BarChart3,
   },
 ];

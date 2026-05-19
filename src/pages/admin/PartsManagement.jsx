@@ -20,11 +20,16 @@ async function partsApi(path, options = {}) {
 
 const CATEGORIES = ["Engine", "Brakes", "Suspension", "Electrical", "Body", "Transmission", "Cooling", "Exhaust", "Other"];
 
-function PartForm({ initial, onSubmit, onCancel, loading, error }) {
-  const [form, setForm] = useState(initial || {
-    name: "", partNumber: "", category: "Engine", description: "",
-    sellingPrice: "", purchasePrice: "", stockQuantity: "", lowStockThreshold: 10, isActive: true
-  });
+function PartForm({ initial, vendors, onSubmit, onCancel, loading, error }) {
+  const [form, setForm] = useState(() => (
+    initial
+      ? { ...initial, vendorId: initial.vendorId?.toString() ?? "" }
+      : {
+        vendorId: "",
+        name: "", partNumber: "", category: "Engine", description: "",
+        sellingPrice: "", purchasePrice: "", stockQuantity: "", lowStockThreshold: 10, isActive: true,
+      }
+  ));
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const setCheck = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.checked }));
@@ -37,6 +42,13 @@ function PartForm({ initial, onSubmit, onCancel, loading, error }) {
         <Input label="Part Name" placeholder="e.g. Brake Pad Set" value={form.name} onChange={set("name")} required />
         <Input label="Part Number" placeholder="e.g. BP-2024-001" value={form.partNumber} onChange={set("partNumber")} required />
       </div>
+
+      <Select label="Vendor" value={form.vendorId} onChange={set("vendorId")}>
+        <option value="">Select vendor</option>
+        {vendors.map((vendor) => (
+          <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+        ))}
+      </Select>
 
       <Select label="Category" value={form.category} onChange={set("category")}>
         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -64,6 +76,7 @@ function PartForm({ initial, onSubmit, onCancel, loading, error }) {
       <div style={{ display: "flex", gap: "10px", paddingTop: "6px" }}>
         <Button type="button" onClick={() => onSubmit({
           ...form,
+          vendorId: parseInt(form.vendorId, 10),
           sellingPrice: parseFloat(form.sellingPrice) || 0,
           purchasePrice: parseFloat(form.purchasePrice) || 0,
           stockQuantity: parseInt(form.stockQuantity) || 0,
@@ -79,6 +92,7 @@ function PartForm({ initial, onSubmit, onCancel, loading, error }) {
 
 export default function PartsManagement() {
   const [parts, setParts] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
@@ -91,8 +105,12 @@ export default function PartsManagement() {
   const fetchParts = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await partsApi("/part");
-      setParts(data);
+      const [partsData, vendorData] = await Promise.all([
+        partsApi("/part"),
+        partsApi("/vendor"),
+      ]);
+      setParts(partsData);
+      setVendors(vendorData);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
@@ -208,13 +226,14 @@ export default function PartsManagement() {
             action={!search && <Button onClick={() => setModal("create")}>Add Part</Button>}
           />
         ) : (
-          <Table headers={["Part", "Category", "Stock", "Purchase Price", "Selling Price", "Status", ""]}>
+          <Table headers={["Part", "Vendor", "Category", "Stock", "Purchase Price", "Selling Price", "Status", ""]}>
             {filtered.map((p) => (
               <TR key={p.id}>
                 <TD>
                   <p style={{ fontWeight: "500", margin: 0 }}>{p.name}</p>
                   <p style={{ fontSize: "11.5px", color: "#9d8db8", margin: 0, fontFamily: "'DM Mono', monospace" }}>{p.partNumber}</p>
                 </TD>
+                <TD>{p.vendorName || "—"}</TD>
                 <TD><Badge color="gray">{p.category}</Badge></TD>
                 <TD>
                   <span style={{ fontWeight: "600", color: p.isLowStock ? "#d97706" : "#1a1523" }}>
@@ -244,12 +263,12 @@ export default function PartsManagement() {
       )}
 
       <Modal open={modal === "create"} onClose={() => setModal(null)} title="Add Part">
-        <PartForm onSubmit={handleCreate} onCancel={() => setModal(null)} loading={formLoading} error={formError} />
+        <PartForm vendors={vendors} onSubmit={handleCreate} onCancel={() => setModal(null)} loading={formLoading} error={formError} />
       </Modal>
 
       <Modal open={modal && modal !== "create"} onClose={() => setModal(null)} title="Edit Part">
         {modal && modal !== "create" && (
-          <PartForm initial={modal} onSubmit={handleUpdate} onCancel={() => setModal(null)} loading={formLoading} error={formError} />
+          <PartForm vendors={vendors} initial={modal} onSubmit={handleUpdate} onCancel={() => setModal(null)} loading={formLoading} error={formError} />
         )}
       </Modal>
 

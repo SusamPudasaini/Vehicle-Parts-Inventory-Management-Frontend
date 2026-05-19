@@ -4,10 +4,30 @@ import { PageHeader, Card, Spinner, Alert } from "../../components/ui";
 const BASE_URL = "https://localhost:7041/api";
 
 async function api(path) {
-  const res = await fetch(`${BASE_URL}${path}`, { headers: { "Content-Type": "application/json" } });
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Request failed");
   return data;
+}
+
+function getRange(type, { date, year, month }) {
+  if (type === "daily") {
+    const start = new Date(date);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start, end };
+  }
+  if (type === "monthly") {
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+    return { start, end };
+  }
+  const start = new Date(year, 0, 1);
+  const end = new Date(year + 1, 0, 1);
+  return { start, end };
 }
 
 function StatCard({ label, value, sub }) {
@@ -23,18 +43,52 @@ function StatCard({ label, value, sub }) {
   );
 }
 
-function ReportResults({ report }) {
+function ReportResults({ report, salesSummary }) {
   if (!report) return null;
+  const summary = salesSummary || {
+    salesTotal: 0,
+    incomeCollected: 0,
+    outstanding: 0,
+    salesCount: 0,
+  };
+  const net = summary.incomeCollected - report.totalPurchases;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <h2 style={{ fontSize: "15px", fontWeight: "600", color: "#1a1523", margin: 0 }}>{report.period}</h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+        <StatCard label="Income Collected" value={`Rs. ${summary.incomeCollected.toLocaleString()}`} sub="paid invoices" />
+        <StatCard label="Sales Total" value={`Rs. ${summary.salesTotal.toLocaleString()}`} sub={`${summary.salesCount} invoices`} />
+        <StatCard label="Expenses" value={`Rs. ${report.totalPurchases.toLocaleString()}`} sub="vendor invoices" />
+        <StatCard label="Net" value={`Rs. ${net.toLocaleString()}`} sub={net >= 0 ? "profit" : "loss"} />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
         <StatCard label="Total Purchases" value={`Rs. ${report.totalPurchases.toLocaleString()}`} />
         <StatCard label="Invoices" value={report.totalInvoices} sub="purchase orders" />
         <StatCard label="Items Bought" value={report.totalItemsBought} sub="units restocked" />
       </div>
+
+      <Card style={{ padding: "14px 16px" }}>
+        <p style={{ fontSize: "12px", fontWeight: "600", color: "#9d8db8", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Sales & Purchases Summary
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: "11.5px", color: "#9d8db8" }}>Sales invoices</p>
+            <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#1a1523" }}>{summary.salesCount}</p>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: "11.5px", color: "#9d8db8" }}>Outstanding</p>
+            <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#b45309" }}>Rs. {summary.outstanding.toLocaleString()}</p>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: "11.5px", color: "#9d8db8" }}>Vendor invoices</p>
+            <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#1a1523" }}>{report.totalInvoices}</p>
+          </div>
+        </div>
+      </Card>
 
       {report.invoices.length === 0 ? (
         <Card style={{ padding: "32px", textAlign: "center" }}>
@@ -79,18 +133,42 @@ export default function FinancialReports() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [report, setReport] = useState(null);
+  const [salesSummary, setSalesSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleGenerate = async () => {
-    setLoading(true); setError(""); setReport(null);
+    setLoading(true); setError(""); setReport(null); setSalesSummary(null);
     try {
       let url = "";
       if (reportType === "daily") url = `/purchaseinvoice/report/daily?date=${date}`;
       else if (reportType === "monthly") url = `/purchaseinvoice/report/monthly?year=${year}&month=${month}`;
       else url = `/purchaseinvoice/report/yearly?year=${year}`;
-      const data = await api(url);
-      setReport(data);
+      const [expenseReport, salesInvoices] = await Promise.all([
+        api(url),
+        api("/customer-invoices"),
+      ]);
+      setReport(expenseReport);
+
+      const range = getRange(reportType, { date, year, month });
+      const inRange = (value) => value && value >= range.start && value < range.end;
+      const invoices = Array.isArray(salesInvoices) ? salesInvoices : [];
+
+      const issued = invoices.filter((inv) => inRange(inv.issuedAtUtc ? new Date(inv.issuedAtUtc) : null));
+      const paid = invoices.filter((inv) => inv.paymentStatus === "Paid" && inRange(inv.paidAtUtc ? new Date(inv.paidAtUtc) : null));
+
+      const salesTotal = issued.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+      const incomeCollected = paid.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+      const outstanding = issued
+        .filter((inv) => inv.paymentStatus !== "Paid")
+        .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+
+      setSalesSummary({
+        salesTotal,
+        incomeCollected,
+        outstanding,
+        salesCount: issued.length,
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -103,7 +181,7 @@ export default function FinancialReports() {
 
   return (
     <>
-      <PageHeader title="Financial Reports" subtitle="View daily, monthly, and yearly purchase summaries" />
+      <PageHeader title="Financial Management" subtitle="View income and expenses, monitor sales and purchases, and generate financial reports." />
 
       <Card style={{ padding: "20px", marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: "12px", flexWrap: "wrap" }}>
@@ -176,7 +254,7 @@ export default function FinancialReports() {
 
       {error && <Alert message={error} />}
       {loading && <Spinner />}
-      {report && <ReportResults report={report} />}
+      {report && <ReportResults report={report} salesSummary={salesSummary} />}
     </>
   );
 }

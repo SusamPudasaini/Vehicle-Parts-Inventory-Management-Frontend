@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { customerPartsApi, customerProfileApi } from "../../services/api";
+import { customerPartsApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { Badge, Button, Card, EmptyState, Input, PageHeader, Select, Spinner } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, Input, PageHeader, Select, Spinner, Table, TD, TR } from "../../components/ui";
 
 const CATEGORY_OPTIONS = ["All"];
 
@@ -13,11 +13,15 @@ const STATUS_COLORS = {
   Rejected: "red",
 };
 
+const LOYALTY_THRESHOLD = 5000;
+const LOYALTY_DISCOUNT_RATE = 0.1;
+
+const formatMoney = (amount) => `Rs. ${Number(amount || 0).toLocaleString()}`;
+
 export default function CustomerParts() {
   const { user } = useAuth();
   const [parts, setParts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -25,6 +29,8 @@ export default function CustomerParts() {
   const [quantities, setQuantities] = useState({});
   const [cart, setCart] = useState([]);
   const [checkoutResult, setCheckoutResult] = useState(null);
+  const [checkoutSummary, setCheckoutSummary] = useState(null);
+  const [ordersPage, setOrdersPage] = useState(1);
 
   if (!user) return <Navigate to="/customer-login" replace />;
   if (user.role !== "Customer") {
@@ -34,15 +40,13 @@ export default function CustomerParts() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [catalogData, ordersData, historyData] = await Promise.all([
+      const [catalogData, ordersData] = await Promise.all([
         customerPartsApi.getCatalog(),
         customerPartsApi.getOrders(),
-        customerProfileApi.getPurchaseHistory().catch(() => []),
       ]);
 
       setParts(Array.isArray(catalogData) ? catalogData : []);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
-      setPurchaseHistory(Array.isArray(historyData) ? historyData : []);
     } catch (e) {
       toast.error(e.message || "Failed to load parts.");
     } finally {
@@ -76,6 +80,22 @@ export default function CustomerParts() {
   const cartTotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.quantity * item.sellingPrice, 0),
     [cart]
+  );
+
+  const ordersPerPage = 6;
+  const totalOrdersPages = Math.max(1, Math.ceil(orders.length / ordersPerPage));
+  const pagedOrders = useMemo(() => {
+    const start = (ordersPage - 1) * ordersPerPage;
+    return orders.slice(start, start + ordersPerPage);
+  }, [orders, ordersPage]);
+
+  const loyaltyDiscount = useMemo(() => (
+    cartTotal >= LOYALTY_THRESHOLD ? cartTotal * LOYALTY_DISCOUNT_RATE : 0
+  ), [cartTotal]);
+
+  const cartTotalAfterDiscount = useMemo(
+    () => Math.max(cartTotal - loyaltyDiscount, 0),
+    [cartTotal, loyaltyDiscount]
   );
 
   const setQuantity = (partId, value) => {
@@ -161,6 +181,11 @@ export default function CustomerParts() {
       );
 
       setCheckoutResult(result);
+      setCheckoutSummary({
+        subtotal: cartTotal,
+        discount: loyaltyDiscount,
+        total: cartTotalAfterDiscount,
+      });
       setCart([]);
       toast.success(`Request #${result.orderId} submitted. Staff will confirm before invoicing.`);
       await loadData();
@@ -180,7 +205,7 @@ export default function CustomerParts() {
         subtitle="Search parts, review price and availability, then submit a request for staff approval and invoice confirmation."
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.7fr) minmax(300px, 0.9fr)", gap: "18px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 1fr)", gap: "22px", alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           <Card style={{ padding: "18px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 220px", gap: "12px" }}>
@@ -266,7 +291,9 @@ export default function CustomerParts() {
                   {cart.length} item{cart.length === 1 ? "" : "s"} selected
                 </p>
               </div>
-              <Badge color="purple">Rs. {cartTotal.toLocaleString()}</Badge>
+              <Badge color={loyaltyDiscount > 0 ? "green" : "purple"}>
+                {formatMoney(cartTotalAfterDiscount)}
+              </Badge>
             </div>
 
             {cart.length === 0 ? (
@@ -274,7 +301,23 @@ export default function CustomerParts() {
                 Add parts from the catalog to prepare your purchase request.
               </p>
             ) : (
-              <div style={{ display: "grid", gap: "12px" }}>
+              <div style={{ display: "grid", gap: "14px" }}>
+                <div style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "12px", display: "grid", gap: "6px" }}>
+                  <InfoRow label="Subtotal" value={formatMoney(cartTotal)} />
+                  <InfoRow
+                    label="Loyalty discount"
+                    value={loyaltyDiscount > 0 ? `- ${formatMoney(loyaltyDiscount)}` : "Rs. 0"}
+                  />
+                  <InfoRow
+                    label="Total due"
+                    value={formatMoney(cartTotalAfterDiscount)}
+                  />
+                  {loyaltyDiscount > 0 && (
+                    <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#15803d" }}>
+                      Loyalty discount applied (10% off orders over Rs. {LOYALTY_THRESHOLD.toLocaleString()}).
+                    </p>
+                  )}
+                </div>
                 {cart.map((item) => (
                   <div key={item.id} style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "12px", display: "grid", gap: "8px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
@@ -297,7 +340,7 @@ export default function CustomerParts() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "8px" }}>
                         <span style={{ fontSize: "12px", color: "#9d8db8" }}>Line total</span>
                         <strong style={{ fontSize: "14px", color: "#1a1523" }}>
-                          Rs. {(item.quantity * item.sellingPrice).toLocaleString()}
+                          {formatMoney(item.quantity * item.sellingPrice)}
                         </strong>
                       </div>
                     </div>
@@ -324,101 +367,94 @@ export default function CustomerParts() {
               <div style={{ display: "grid", gap: "8px", marginTop: "12px" }}>
                 <InfoRow label="Request ID" value={`#${checkoutResult.orderId}`} />
                 <InfoRow label="Status" value={checkoutResult.status} />
-                <InfoRow label="Total" value={`Rs. ${Number(checkoutResult.totalAmount).toLocaleString()}`} />
+                {checkoutSummary && (
+                  <>
+                    <InfoRow label="Subtotal" value={formatMoney(checkoutSummary.subtotal)} />
+                    <InfoRow
+                      label="Loyalty discount"
+                      value={checkoutSummary.discount > 0 ? `- ${formatMoney(checkoutSummary.discount)}` : "Rs. 0"}
+                    />
+                  </>
+                )}
+                <InfoRow label="Total" value={formatMoney(checkoutResult.totalAmount)} />
                 <InfoRow label="Submitted at" value={new Date(checkoutResult.requestedAt).toLocaleString()} />
               </div>
             </Card>
           )}
 
-          <Card style={{ padding: "18px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
-                Submitted Requests
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Badge color="purple">{orders.length}</Badge>
-                {orders.length > 0 && (
-                  <Link to="/customer/history?tab=invoices" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
-                    View all
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {orders.length === 0 ? (
-              <p style={{ margin: 0, fontSize: "13px", color: "#9d8db8" }}>
-                No purchase requests submitted yet.
-              </p>
-            ) : (
-              <div style={{ display: "grid", gap: "10px" }}>
-                {orders.slice(0, 6).map((order) => (
-                  <div key={order.id} style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "12px", display: "grid", gap: "6px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                      <strong style={{ fontSize: "13.5px", color: "#1a1523" }}>Request #{order.id}</strong>
-                      <Badge color={STATUS_COLORS[order.status] || "gray"}>{order.status}</Badge>
-                    </div>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#7c6f96" }}>
-                      {order.items.length} item{order.items.length === 1 ? "" : "s"} · Rs. {Number(order.totalAmount).toLocaleString()}
-                    </p>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#9d8db8" }}>
-                      Submitted on {new Date(order.requestedAtUtc).toLocaleString()}
-                    </p>
-                    {order.invoiceNumber && (
-                      <p style={{ margin: 0, fontSize: "12px", color: "#15803d" }}>
-                        Invoice: {order.invoiceNumber}
-                      </p>
-                    )}
-                    {order.staffNotes && (
-                      <p style={{ margin: 0, fontSize: "12px", color: "#9d8db8" }}>
-                        Staff note: {order.staffNotes}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card style={{ padding: "18px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
-                Completed Purchases
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Badge color="purple">{purchaseHistory.length}</Badge>
-                {purchaseHistory.length > 0 && (
-                  <Link to="/customer/history?tab=purchases" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
-                    View all
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {purchaseHistory.length === 0 ? (
-              <p style={{ margin: 0, fontSize: "13px", color: "#9d8db8" }}>
-                Approved purchases will appear here.
-              </p>
-            ) : (
-              <div style={{ display: "grid", gap: "10px" }}>
-                {purchaseHistory.slice(0, 6).map((entry) => (
-                  <div key={entry.id} style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "12px", display: "grid", gap: "6px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                      <strong style={{ fontSize: "13.5px", color: "#1a1523" }}>{entry.partName}</strong>
-                      <Badge color="green">Rs. {Number(entry.totalPrice).toLocaleString()}</Badge>
-                    </div>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#7c6f96" }}>
-                      Invoice {entry.invoiceNumber}
-                    </p>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#9d8db8" }}>
-                      Qty {entry.quantity} x Rs. {Number(entry.unitPrice).toLocaleString()} on {new Date(entry.purchasedAt).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
       </div>
+
+      <Card style={{ padding: "18px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+          <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
+            Submitted Requests
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Badge color="purple">{orders.length}</Badge>
+            {orders.length > 0 && (
+              <Link to="/customer/history?tab=invoices" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+                View all
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {orders.length === 0 ? (
+          <p style={{ margin: 0, fontSize: "13px", color: "#9d8db8" }}>
+            No purchase requests submitted yet.
+          </p>
+        ) : (
+          <>
+            <Table headers={["Request", "Items", "Total", "Status", "Submitted", "Details"]}>
+              {pagedOrders.map((order) => (
+                <TR key={order.id}>
+                  <TD mono>#{order.id}</TD>
+                  <TD>{order.items.length} item{order.items.length === 1 ? "" : "s"}</TD>
+                  <TD>{formatMoney(order.totalAmount)}</TD>
+                  <TD>
+                    <Badge color={STATUS_COLORS[order.status] || "gray"}>{order.status}</Badge>
+                  </TD>
+                  <TD muted>
+                    {order.requestedAtUtc ? new Date(order.requestedAtUtc).toLocaleString() : "—"}
+                  </TD>
+                  <TD style={{ fontSize: "12px" }}>
+                    {order.invoiceNumber ? (
+                      <div style={{ color: "#15803d", fontWeight: 500 }}>Invoice {order.invoiceNumber}</div>
+                    ) : (
+                      <div style={{ color: "#9d8db8" }}>Awaiting invoice</div>
+                    )}
+                    {order.staffNotes && (
+                      <div style={{ color: "#9d8db8", marginTop: "4px" }}>Note: {order.staffNotes}</div>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </Table>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "14px" }}>
+              <span style={{ fontSize: "12px", color: "#9d8db8" }}>
+                Page {ordersPage} of {totalOrdersPages}
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setOrdersPage((page) => Math.max(1, page - 1))}
+                  disabled={ordersPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setOrdersPage((page) => Math.min(totalOrdersPages, page + 1))}
+                  disabled={ordersPage === totalOrdersPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
     </div>
   );
 }
