@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { partRequestApi } from "../../services/api";
-import { PageHeader, Button, Input, Card, Alert } from "../../components/ui";
+import { PageHeader, Button, Input, Card } from "../../components/ui";
 
 export default function RequestPart() {
   const { id: customerId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [form, setForm] = useState({ partName: "", quantity: 1, details: "" });
 
   const setField = (k) => (e) => setForm((s) => ({ ...s, [k]: e.target.value }));
@@ -20,13 +20,19 @@ export default function RequestPart() {
 
   const handleSubmit = async () => {
     const err = validate();
-    if (err) { setError(err); return; }
-    setLoading(true); setError("");
+    if (err) { toast.error(err); return; }
+    setLoading(true);
     try {
-      await partRequestApi.create(customerId, { partName: form.partName, quantity: parseInt(form.quantity), details: form.details });
+      await partRequestApi.create({
+        customerId: Number(customerId),
+        partName: form.partName,
+        quantity: parseInt(form.quantity),
+        description: form.details,
+      });
+      toast.success("Part request submitted.");
       navigate(`/staff/customers/${customerId}`);
     } catch (e) {
-      setError(e.message);
+      toast.error(e.message || "Failed to submit part request.");
     } finally {
       setLoading(false);
     }
@@ -37,8 +43,6 @@ export default function RequestPart() {
       <PageHeader title="Request Unavailable Part" subtitle="Create a request for parts that are not in stock" />
 
       <div style={{ maxWidth: "620px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Alert message={error} />
-
         <Card style={{ padding: "18px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div style={{ gridColumn: "1 / -1" }}>

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BarChart3, CalendarCheck, FileText, LogOut, Monitor, PackageCheck, Search, UserPlus, Users, Wrench } from "lucide-react";
+import { BarChart3, CalendarCheck, FileText, LogOut, Monitor, PackageCheck, PackageSearch, Search, UserPlus, Users, Wrench } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import BrandLogo from "./BrandLogo";
 import PageTransition from "./PageTransition";
@@ -16,6 +16,10 @@ const adminLinks = [
   {
     to: "/admin/parts", label: "Parts",
     icon: Wrench,
+  },
+  {
+    to: "/admin/part-requests", label: "Part Requests",
+    icon: PackageSearch,
   },
   {
     to: "/admin/invoices", label: "Purchase Invoices",
@@ -43,6 +47,10 @@ const staffLinks = [
   {
     to: "/staff/part-orders", label: "Part Orders",
     icon: PackageCheck,
+  },
+  {
+    to: "/staff/part-requests", label: "Part Requests",
+    icon: PackageSearch,
   },
   {
     to: "/staff/search", label: "Search",

@@ -115,12 +115,6 @@ export default function CustomerDetail() {
             <InfoRow label="Address" value={customer.address} />
           </div>
 
-          {/* Action buttons */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "18px" }}>
-            <Button onClick={() => navigate(`/staff/customers/${id}/book-appointment`)} style={{ fontSize: "12.5px", width: "100%" }}>📅 Appointment</Button>
-            <Button onClick={() => navigate(`/staff/customers/${id}/request-part`)} variant="secondary" style={{ fontSize: "12.5px", width: "100%" }}>⚙️ Request Part</Button>
-            <Button onClick={() => navigate(`/staff/customers/${id}/review-service`)} variant="secondary" style={{ fontSize: "12.5px", width: "100%" }}>⭐ Review</Button>
-          </div>
         </Card>
 
         {/* Vehicles */}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { customerPartsApi, customerProfileApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -335,7 +335,14 @@ export default function CustomerParts() {
               <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
                 Submitted Requests
               </p>
-              <Badge color="purple">{orders.length}</Badge>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Badge color="purple">{orders.length}</Badge>
+                {orders.length > 0 && (
+                  <Link to="/customer/history?tab=invoices" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+                    View all
+                  </Link>
+                )}
+              </div>
             </div>
 
             {orders.length === 0 ? (
@@ -377,7 +384,14 @@ export default function CustomerParts() {
               <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
                 Completed Purchases
               </p>
-              <Badge color="purple">{purchaseHistory.length}</Badge>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Badge color="purple">{purchaseHistory.length}</Badge>
+                {purchaseHistory.length > 0 && (
+                  <Link to="/customer/history?tab=purchases" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+                    View all
+                  </Link>
+                )}
+              </div>
             </div>
 
             {purchaseHistory.length === 0 ? (

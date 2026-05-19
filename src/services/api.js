@@ -62,6 +62,8 @@ export const customerApi = {
   getAll: () => request("/customer"),
   getById: (id) => request(`/customer/${id}`),
   register: (data) => request("/customer", { method: "POST", body: JSON.stringify(data) }),
+  update: (id, data) => request(`/customer/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id) => request(`/customer/${id}`, { method: "DELETE" }),
   search: (q) => request(`/customer/search?q=${encodeURIComponent(q)}`),
 };
 
@@ -87,8 +89,10 @@ export const customerPartOrdersApi = {
 };
 
 export const partRequestApi = {
-  getAll: (customerId) => request(`/customer/${customerId}/requests`),
-  create: (customerId, data) => request(`/customer/${customerId}/requests`, { method: "POST", body: JSON.stringify(data) }),
+  getMine: () => request("/part-requests/customer"),
+  create: (data) => request("/part-requests", { method: "POST", body: JSON.stringify(data) }),
+  getAll: () => request("/part-requests"),
+  updateStatus: (id, status) => request(`/part-requests/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
 };
 
 export const reviewApi = {

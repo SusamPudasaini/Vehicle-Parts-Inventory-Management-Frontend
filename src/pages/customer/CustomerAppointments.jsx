@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { appointmentApi, customerProfileApi } from "../../services/api";
 import { Badge, Button, Card, Input, PageHeader, Select, Spinner } from "../../components/ui";
@@ -184,7 +184,7 @@ export default function CustomerAppointments() {
                 <option value="">No vehicle selected</option>
                 {vehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.vehicleNumber} · {vehicle.make} {vehicle.model}
+                    {vehicle.vehicleNumber} ï¿½ {vehicle.make} {vehicle.model}
                   </option>
                 ))}
               </Select>
@@ -226,7 +226,7 @@ export default function CustomerAppointments() {
               <InfoRow
                 label="Vehicle"
                 value={selectedVehicle
-                  ? `${selectedVehicle.vehicleNumber} · ${selectedVehicle.make} ${selectedVehicle.model}`
+                  ? `${selectedVehicle.vehicleNumber} ï¿½ ${selectedVehicle.make} ${selectedVehicle.model}`
                   : "Not selected"}
               />
               <InfoRow label="Notes" value={form.notes || "None"} />
@@ -262,7 +262,12 @@ export default function CustomerAppointments() {
           <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: 0 }}>
             Recent appointments
           </p>
-          <Badge color="purple">{appointments.length}</Badge>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Badge color="purple">{appointments.length}</Badge>
+            <Link to="/customer/history?tab=services" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+              Service history
+            </Link>
+          </div>
         </div>
 
         {appointments.length > 0 ? (

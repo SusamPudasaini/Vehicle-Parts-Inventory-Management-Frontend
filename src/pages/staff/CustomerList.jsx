@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search } from "lucide-react";
+import toast from "react-hot-toast";
 import { customerApi } from "../../services/api";
-import { PageHeader, Button, Badge, Card, Spinner, EmptyState, Table, TR, TD } from "../../components/ui";
+import { PageHeader, Button, Badge, Card, Spinner, EmptyState, Table, TR, TD, Modal, Input } from "../../components/ui";
 
 function Avatar({ name }) {
   return (
@@ -17,9 +18,9 @@ function Avatar({ name }) {
   );
 }
 
-function CustomerRow({ customer, onView }) {
+function CustomerRow({ customer, onEdit, onDelete }) {
   return (
-    <TR onClick={() => onView(customer.id)}>
+    <TR>
       <TD>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Avatar name={customer.fullName} />
@@ -46,28 +47,29 @@ function CustomerRow({ customer, onView }) {
       </TD>
       <TD muted>{new Date(customer.registeredAt).toLocaleDateString()}</TD>
       <TD>
-        <button
-          onClick={(e) => { e.stopPropagation(); onView(customer.id); }}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: "12.5px", fontWeight: "500", color: "var(--purple-600)",
-            padding: "4px 8px", borderRadius: "5px", fontFamily: "inherit",
-          }}
-        >
-          View →
-        </button>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <Button variant="secondary" onClick={() => onEdit(customer)} style={{ padding: "5px 10px", fontSize: "12px" }}>
+            Edit
+          </Button>
+          <Button variant="danger" onClick={() => onDelete(customer)} style={{ padding: "5px 10px", fontSize: "12px" }}>
+            Delete
+          </Button>
+        </div>
       </TD>
     </TR>
   );
 }
 
 export function SearchCustomers() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const inputRef = useRef(null);
+  const [editModal, setEditModal] = useState({ open: false, customer: null });
+  const [deleteModal, setDeleteModal] = useState({ open: false, customer: null });
+  const [editForm, setEditForm] = useState({ fullName: "", email: "", phone: "", address: "" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -78,6 +80,54 @@ export function SearchCustomers() {
     catch { setResults([]); }
     finally { setLoading(false); }
   }, [query]);
+
+  const openEdit = (customer) => {
+    setEditForm({
+      fullName: customer.fullName || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      address: customer.address || "",
+    });
+    setEditModal({ open: true, customer });
+  };
+
+  const openDelete = (customer) => {
+    setDeleteModal({ open: true, customer });
+  };
+
+  const handleUpdate = async () => {
+    if (!editModal.customer) return;
+    if (!editForm.fullName.trim()) return toast.error("Full name is required.");
+    if (!editForm.email.trim()) return toast.error("Email is required.");
+    if (!editForm.phone.trim()) return toast.error("Phone is required.");
+
+    setSaving(true);
+    try {
+      const updated = await customerApi.update(editModal.customer.id, editForm);
+      setResults((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      toast.success("Customer updated.");
+      setEditModal({ open: false, customer: null });
+    } catch (e) {
+      toast.error(e.message || "Failed to update customer.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal.customer) return;
+    setSaving(true);
+    try {
+      await customerApi.delete(deleteModal.customer.id);
+      setResults((prev) => prev.filter((c) => c.id !== deleteModal.customer.id));
+      toast.success("Customer deleted.");
+      setDeleteModal({ open: false, customer: null });
+    } catch (e) {
+      toast.error(e.message || "Failed to delete customer.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -133,15 +183,54 @@ export function SearchCustomers() {
                   {results.length} result{results.length !== 1 ? "s" : ""}
                 </p>
               </div>
-              <Table headers={["Customer", "Phone", "Vehicles", "Registered", ""]}>
+              <Table headers={["Customer", "Phone", "Vehicles", "Registered", "Actions"]}>
                 {results.map((c) => (
-                  <CustomerRow key={c.id} customer={c} onView={(id) => navigate(`/staff/customers/${id}`)} />
+                  <CustomerRow key={c.id} customer={c} onEdit={openEdit} onDelete={openDelete} />
                 ))}
               </Table>
             </>
           )}
         </Card>
       )}
+
+      <Modal
+        open={editModal.open}
+        onClose={() => setEditModal({ open: false, customer: null })}
+        title="Edit customer"
+      >
+        <div style={{ display: "grid", gap: "12px" }}>
+          <Input label="Full name" value={editForm.fullName} onChange={(e) => setEditForm((s) => ({ ...s, fullName: e.target.value }))} />
+          <Input label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))} />
+          <Input label="Phone" value={editForm.phone} onChange={(e) => setEditForm((s) => ({ ...s, phone: e.target.value }))} />
+          <Input label="Address" value={editForm.address} onChange={(e) => setEditForm((s) => ({ ...s, address: e.target.value }))} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
+          <Button variant="secondary" onClick={() => setEditModal({ open: false, customer: null })}>
+            Cancel
+          </Button>
+          <Button onClick={handleUpdate} disabled={saving}>
+            {saving ? "Saving..." : "Save changes"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, customer: null })}
+        title="Delete customer"
+      >
+        <p style={{ fontSize: "13px", color: "#6d5d8a", margin: "0 0 16px" }}>
+          Are you sure you want to delete {deleteModal.customer?.fullName}? This will remove their vehicles and history.
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <Button variant="secondary" onClick={() => setDeleteModal({ open: false, customer: null })}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={saving}>
+            {saving ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -151,6 +240,10 @@ export default function CustomerList() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [editModal, setEditModal] = useState({ open: false, customer: null });
+  const [deleteModal, setDeleteModal] = useState({ open: false, customer: null });
+  const [editForm, setEditForm] = useState({ fullName: "", email: "", phone: "", address: "" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     customerApi.getAll().then(setCustomers).catch(() => {}).finally(() => setLoading(false));
@@ -161,6 +254,54 @@ export default function CustomerList() {
     c.phone?.includes(search) ||
     c.vehicles?.some((v) => v.vehicleNumber.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const openEdit = (customer) => {
+    setEditForm({
+      fullName: customer.fullName || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      address: customer.address || "",
+    });
+    setEditModal({ open: true, customer });
+  };
+
+  const openDelete = (customer) => {
+    setDeleteModal({ open: true, customer });
+  };
+
+  const handleUpdate = async () => {
+    if (!editModal.customer) return;
+    if (!editForm.fullName.trim()) return toast.error("Full name is required.");
+    if (!editForm.email.trim()) return toast.error("Email is required.");
+    if (!editForm.phone.trim()) return toast.error("Phone is required.");
+
+    setSaving(true);
+    try {
+      const updated = await customerApi.update(editModal.customer.id, editForm);
+      setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      toast.success("Customer updated.");
+      setEditModal({ open: false, customer: null });
+    } catch (e) {
+      toast.error(e.message || "Failed to update customer.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal.customer) return;
+    setSaving(true);
+    try {
+      await customerApi.delete(deleteModal.customer.id);
+      setCustomers((prev) => prev.filter((c) => c.id !== deleteModal.customer.id));
+      toast.success("Customer deleted.");
+      setDeleteModal({ open: false, customer: null });
+    } catch (e) {
+      toast.error(e.message || "Failed to delete customer.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -201,9 +342,9 @@ export default function CustomerList() {
             action={!search && <Button onClick={() => navigate("/staff/register-customer")}>Register Customer</Button>}
           />
         ) : (
-          <Table headers={["Customer", "Phone", "Vehicles", "Registered", ""]}>
+          <Table headers={["Customer", "Phone", "Vehicles", "Registered", "Actions"]}>
             {filtered.map((c) => (
-              <CustomerRow key={c.id} customer={c} onView={(id) => navigate(`/staff/customers/${id}`)} />
+              <CustomerRow key={c.id} customer={c} onEdit={openEdit} onDelete={openDelete} />
             ))}
           </Table>
         )}
@@ -214,6 +355,45 @@ export default function CustomerList() {
           {filtered.length} of {customers.length} customers
         </p>
       )}
+
+      <Modal
+        open={editModal.open}
+        onClose={() => setEditModal({ open: false, customer: null })}
+        title="Edit customer"
+      >
+        <div style={{ display: "grid", gap: "12px" }}>
+          <Input label="Full name" value={editForm.fullName} onChange={(e) => setEditForm((s) => ({ ...s, fullName: e.target.value }))} />
+          <Input label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))} />
+          <Input label="Phone" value={editForm.phone} onChange={(e) => setEditForm((s) => ({ ...s, phone: e.target.value }))} />
+          <Input label="Address" value={editForm.address} onChange={(e) => setEditForm((s) => ({ ...s, address: e.target.value }))} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
+          <Button variant="secondary" onClick={() => setEditModal({ open: false, customer: null })}>
+            Cancel
+          </Button>
+          <Button onClick={handleUpdate} disabled={saving}>
+            {saving ? "Saving..." : "Save changes"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, customer: null })}
+        title="Delete customer"
+      >
+        <p style={{ fontSize: "13px", color: "#6d5d8a", margin: "0 0 16px" }}>
+          Are you sure you want to delete {deleteModal.customer?.fullName}? This will remove their vehicles and history.
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <Button variant="secondary" onClick={() => setDeleteModal({ open: false, customer: null })}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={saving}>
+            {saving ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }

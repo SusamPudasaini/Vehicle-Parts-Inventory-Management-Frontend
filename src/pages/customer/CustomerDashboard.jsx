@@ -7,9 +7,9 @@ import { useAuth } from "../../context/AuthContext";
 import { customerProfileApi } from "../../services/api";
 import { Badge, Button, Card, PageHeader, Spinner } from "../../components/ui";
 
-function StatCard({ label, value, hint }) {
-  return (
-    <Card style={{ padding: "18px" }}>
+function StatCard({ label, value, hint, onClick }) {
+  const content = (
+    <Card style={{ padding: "18px", height: "100%" }}>
       <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: "0 0 10px" }}>
         {label}
       </p>
@@ -18,6 +18,26 @@ function StatCard({ label, value, hint }) {
       </p>
       {hint && <p style={{ fontSize: "12.5px", color: "#7c6f96", margin: "8px 0 0" }}>{hint}</p>}
     </Card>
+  );
+
+  if (!onClick) return content;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+        textAlign: "left",
+        fontFamily: "inherit",
+        width: "100%",
+      }}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -112,7 +132,10 @@ export default function CustomerDashboard() {
         title={`Welcome, ${customer.fullName || "Customer"}`}
         subtitle="Your vehicles, service activity, and purchase history in one place."
         action={
-          <Button onClick={() => goTo("/customer/appointments")}>Book appointment</Button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <Button variant="secondary" onClick={() => goTo("/customer/history")}>View history</Button>
+            <Button onClick={() => goTo("/customer/appointments")}>Book appointment</Button>
+          </div>
         }
       />
 
@@ -122,9 +145,9 @@ export default function CustomerDashboard() {
         transition={{ duration: 0.26, ease: "easeOut" }}
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}
       >
-        <StatCard label="Vehicles" value={vehicles.length} hint="Registered to your profile" />
-        <StatCard label="Services" value={serviceHistory.length} hint="Completed service records" />
-        <StatCard label="Purchases" value={purchaseHistory.length} hint="Recorded part purchases" />
+        <StatCard label="Vehicles" value={vehicles.length} hint="Registered to your profile" onClick={() => goTo("/customer/vehicles")} />
+        <StatCard label="Services" value={serviceHistory.length} hint="View service history" onClick={() => goTo("/customer/history?tab=services")} />
+        <StatCard label="Purchases" value={purchaseHistory.length} hint="View previous purchases" onClick={() => goTo("/customer/history?tab=purchases")} />
       </motion.section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
