@@ -69,6 +69,10 @@ export const reviewApi = {
 export const customerProfileApi = {
   getProfile: () => request("/customer-profile/profile"),
   getVehicles: () => request("/customer-profile/vehicles"),
+  updateProfile: (data) => request("/customer-profile/profile", { method: "PUT", body: JSON.stringify(data) }),
+  addVehicle: (data) => request("/customer-profile/vehicles", { method: "POST", body: JSON.stringify(data) }),
+  updateVehicle: (id, data) => request(`/customer-profile/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteVehicle: (id) => request(`/customer-profile/vehicles/${id}`, { method: "DELETE" }),
   getPurchaseHistory: () => request("/customer-profile/purchase-history"),
   getServiceHistory: () => request("/customer-profile/service-history"),
 };
