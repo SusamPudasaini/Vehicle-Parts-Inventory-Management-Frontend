@@ -267,6 +267,9 @@ export default function CustomerAppointments() {
             <Link to="/customer/history?tab=services" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
               Service history
             </Link>
+            <Link to="/customer/reviews" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+              Leave review
+            </Link>
           </div>
         </div>
 

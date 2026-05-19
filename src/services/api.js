@@ -6,9 +6,14 @@ if (!BASE_URL) {
 
 // ── Generic fetch helper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers = isFormData
+    ? { ...options.headers }
+    : { "Content-Type": "application/json", ...options.headers };
+
   const res = await fetch(`${BASE_URL}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers,
     ...options,
   });
 
@@ -96,8 +101,15 @@ export const partRequestApi = {
 };
 
 export const reviewApi = {
-  getAll: (customerId) => request(`/customer/${customerId}/reviews`),
-  create: (customerId, data) => request(`/customer/${customerId}/reviews`, { method: "POST", body: JSON.stringify(data) }),
+  getAll: () => request("/reviews"),
+  getByCustomer: (customerId) => request(`/reviews/customer/${customerId}`),
+  create: (data) => request("/reviews", { method: "POST", body: JSON.stringify(data) }),
+};
+
+export const customerReviewApi = {
+  getMine: () => request("/customer-profile/reviews"),
+  getReviewable: () => request("/customer-profile/reviewable-services"),
+  create: (data) => request("/customer-profile/reviews", { method: "POST", body: JSON.stringify(data) }),
 };
 
 export const customerProfileApi = {
@@ -109,4 +121,27 @@ export const customerProfileApi = {
   deleteVehicle: (id) => request(`/customer-profile/vehicles/${id}`, { method: "DELETE" }),
   getPurchaseHistory: () => request("/customer-profile/purchase-history"),
   getServiceHistory: () => request("/customer-profile/service-history"),
+  getInvoices: () => request("/customer-profile/invoices"),
+  getUnpaidInvoices: () => request("/customer-profile/unpaid-invoices"),
+};
+
+export const customerInvoiceApi = {
+  getAll: (unpaidOnly = false) => request(`/customer-invoices${unpaidOnly ? "?unpaidOnly=true" : ""}`),
+  getByCustomer: (customerId) => request(`/customer-invoices/customer/${customerId}`),
+  submitPayment: (invoiceId, formData) =>
+    request(`/customer-invoices/${invoiceId}/submit-payment`, {
+      method: "POST",
+      body: formData,
+    }),
+  markPaid: (invoiceId) => request(`/customer-invoices/${invoiceId}/mark-paid`, { method: "PUT" }),
+  completeService: (appointmentId, data) =>
+    request(`/customer-invoices/appointments/${appointmentId}/complete`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  sendReminders: () => request("/customer-invoices/send-overdue-reminders", { method: "POST" }),
+};
+
+export const customerReportsApi = {
+  get: () => request("/customer-reports"),
 };

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BarChart3, CalendarCheck, FileText, LogOut, Monitor, PackageCheck, PackageSearch, Search, UserPlus, Users, Wrench } from "lucide-react";
+import { BarChart3, CalendarCheck, FileText, LogOut, MessageSquare, Monitor, PackageCheck, PackageSearch, Receipt, Search, UserPlus, Users, Wrench } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import BrandLogo from "./BrandLogo";
 import PageTransition from "./PageTransition";
@@ -29,6 +29,18 @@ const adminLinks = [
     to: "/admin/reports", label: "Reports",
     icon: BarChart3,
   },
+  {
+    to: "/staff/reviews", label: "Customer Reviews",
+    icon: MessageSquare,
+  },
+  {
+    to: "/staff/invoices", label: "Customer Invoices",
+    icon: Receipt,
+  },
+  {
+    to: "/staff/customer-reports", label: "Customer Reports",
+    icon: BarChart3,
+  },
 ];
 
 const staffLinks = [
@@ -55,6 +67,18 @@ const staffLinks = [
   {
     to: "/staff/search", label: "Search",
     icon: Search,
+  },
+  {
+    to: "/staff/reviews", label: "Reviews",
+    icon: MessageSquare,
+  },
+  {
+    to: "/staff/invoices", label: "Customer Invoices",
+    icon: Receipt,
+  },
+  {
+    to: "/staff/customer-reports", label: "Customer Reports",
+    icon: BarChart3,
   },
 ];
 

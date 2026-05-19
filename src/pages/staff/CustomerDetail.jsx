@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { customerApi } from "../../services/api";
+import { ArrowLeft, Star } from "lucide-react";
+import { customerApi, reviewApi } from "../../services/api";
 import { Button, Badge, Card, Spinner } from "../../components/ui";
 
 function InfoRow({ label, value }) {
@@ -42,12 +42,19 @@ export default function CustomerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    customerApi.getById(id)
-      .then(setCustomer)
+    Promise.all([
+      customerApi.getById(id),
+      reviewApi.getByCustomer(id).catch(() => []),
+    ])
+      .then(([customerData, reviewData]) => {
+        setCustomer(customerData);
+        setReviews(Array.isArray(reviewData) ? reviewData : []);
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
@@ -135,6 +142,66 @@ export default function CustomerDetail() {
           )}
         </Card>
       </div>
+
+      <Card style={{ padding: "18px", marginTop: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+          <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: 0 }}>
+            Reviews & feedback ({reviews.length})
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/staff/customers/${id}/review-service`)}
+            style={{ padding: "6px 12px", fontSize: "12px" }}
+          >
+            Record review
+          </Button>
+        </div>
+
+        {reviews.length === 0 ? (
+          <p style={{ fontSize: "13px", color: "#9d8db8", margin: 0 }}>
+            No reviews submitted for this customer yet.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gap: "10px" }}>
+            {reviews.map((review) => (
+              <div
+                key={review.reviewId}
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  display: "grid",
+                  gap: "6px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: "#1a1523" }}>
+                      {review.serviceType || "Service"}
+                    </p>
+                    {review.serviceDate && (
+                      <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#9d8db8" }}>
+                        {new Date(review.serviceDate).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#f59e0b" }}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} size={14} fill={n <= review.rating ? "currentColor" : "none"} strokeWidth={1.8} />
+                    ))}
+                  </div>
+                </div>
+                {review.comment && (
+                  <p style={{ margin: 0, fontSize: "13px", color: "#6d5d8a" }}>{review.comment}</p>
+                )}
+                <p style={{ margin: 0, fontSize: "11.5px", color: "#9d8db8" }}>
+                  {new Date(review.createdAtUtc).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </>
   );
 }

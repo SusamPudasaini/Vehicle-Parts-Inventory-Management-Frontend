@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FileText, Package, Wrench } from "lucide-react";
 import {
   appointmentApi,
+  customerInvoiceApi,
   customerPartsApi,
   customerProfileApi,
 } from "../../services/api";
@@ -15,12 +16,6 @@ const TABS = [
   { id: "services", label: "Service History", icon: Wrench },
   { id: "invoices", label: "Invoices & Payments", icon: FileText },
 ];
-
-const PAYMENT_STATUS = {
-  Approved: { label: "Paid", color: "green" },
-  Pending: { label: "Awaiting approval", color: "yellow" },
-  Rejected: { label: "Not billed", color: "red" },
-};
 
 function formatMoney(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString()}`;
@@ -43,6 +38,7 @@ export default function CustomerHistory() {
   const [serviceHistory, setServiceHistory] = useState([]);
   const [orders, setOrders] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [billingInvoices, setBillingInvoices] = useState([]);
 
   if (!user) return <Navigate to="/customer-login" replace />;
   if (user.role !== "Customer") {
@@ -58,13 +54,14 @@ export default function CustomerHistory() {
         const profile = await customerProfileApi.getProfile();
         const customerId = profile?.id;
 
-        const [purchases, services, ordersData, apptData] = await Promise.all([
+        const [purchases, services, ordersData, apptData, invoiceData] = await Promise.all([
           customerProfileApi.getPurchaseHistory().catch(() => []),
           customerProfileApi.getServiceHistory().catch(() => []),
           customerPartsApi.getOrders().catch(() => []),
           customerId
             ? appointmentApi.getByCustomer(customerId).catch(() => [])
             : Promise.resolve([]),
+          customerProfileApi.getInvoices().catch(() => []),
         ]);
 
         if (!alive) return;
@@ -72,6 +69,7 @@ export default function CustomerHistory() {
         setServiceHistory(Array.isArray(services) ? services : []);
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setAppointments(Array.isArray(apptData) ? apptData : []);
+        setBillingInvoices(Array.isArray(invoiceData) ? invoiceData : []);
       } catch (e) {
         if (alive) toast.error(e.message || "Could not load your history.");
       } finally {
@@ -116,59 +114,10 @@ export default function CustomerHistory() {
     );
   }, [serviceHistory, completedAppointments]);
 
-  const invoices = useMemo(() => {
-    const byInvoice = new Map();
-
-    orders.forEach((order) => {
-      const payment = PAYMENT_STATUS[order.status] || { label: order.status, color: "gray" };
-      const entry = {
-        id: order.id,
-        invoiceNumber: order.invoiceNumber || `Request #${order.id}`,
-        status: order.status,
-        paymentLabel: payment.label,
-        paymentColor: payment.color,
-        totalAmount: order.totalAmount,
-        date: order.processedAtUtc || order.requestedAtUtc,
-        items: [...(order.items || [])],
-        isRequest: !order.invoiceNumber,
-      };
-
-      const groupKey = order.invoiceNumber || `pending-${order.id}`;
-      byInvoice.set(groupKey, entry);
-    });
-
-    purchaseHistory.forEach((line) => {
-      const key = line.invoiceNumber || `purchase-${line.id}`;
-      if (!byInvoice.has(key)) {
-        byInvoice.set(key, {
-          id: line.id,
-          invoiceNumber: line.invoiceNumber,
-          status: "Approved",
-          paymentLabel: "Paid",
-          paymentColor: "green",
-          totalAmount: 0,
-          date: line.purchasedAt,
-          items: [],
-          isRequest: false,
-        });
-      }
-      const group = byInvoice.get(key);
-      group.items.push({
-        partName: line.partName,
-        quantity: line.quantity,
-        unitPrice: line.unitPrice,
-        lineTotal: line.totalPrice,
-      });
-      group.totalAmount += Number(line.totalPrice || 0);
-      if (new Date(line.purchasedAt) > new Date(group.date)) {
-        group.date = line.purchasedAt;
-      }
-    });
-
-    return Array.from(byInvoice.values()).sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
-  }, [orders, purchaseHistory]);
+  const pendingOrders = useMemo(
+    () => orders.filter((o) => o.status === "Pending"),
+    [orders]
+  );
 
   const setTab = (tabId) => {
     setSearchParams({ tab: tabId }, { replace: true });
@@ -236,7 +185,7 @@ export default function CustomerHistory() {
       )}
 
       {activeTab === "invoices" && (
-        <InvoicesTab invoices={invoices} />
+        <InvoicesTab invoices={billingInvoices} pendingOrders={pendingOrders} />
       )}
     </div>
   );
@@ -310,7 +259,12 @@ function ServicesTab({ entries }) {
         <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
           Service History
         </p>
-        <Badge color="purple">{entries.length}</Badge>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Badge color="purple">{entries.length}</Badge>
+          <Link to="/customer/reviews" style={{ fontSize: "12px", color: "var(--purple-600)", textDecoration: "none" }}>
+            Leave a review
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: "grid", gap: "10px" }}>
@@ -349,41 +303,80 @@ function ServicesTab({ entries }) {
   );
 }
 
-function InvoicesTab({ invoices }) {
-  if (invoices.length === 0) {
+function InvoicesTab({ invoices, pendingOrders }) {
+  const [selectedFiles, setSelectedFiles] = useState({});
+  const [submittingInvoiceId, setSubmittingInvoiceId] = useState(null);
+  const [localInvoices, setLocalInvoices] = useState(invoices);
+  const fileBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+
+  useEffect(() => {
+    setLocalInvoices(invoices);
+  }, [invoices]);
+
+  const hasContent = invoices.length > 0 || pendingOrders.length > 0;
+
+  if (!hasContent) {
     return (
       <EmptyState
         title="No invoices yet"
-        description="Invoices are issued when your part purchase requests are approved by staff."
+        description="Invoices are emailed when staff approves parts orders or completes a service."
       />
     );
   }
 
   return (
     <div style={{ display: "grid", gap: "14px" }}>
-      {invoices.map((invoice) => (
-        <Card key={`${invoice.invoiceNumber}-${invoice.id}`} style={{ padding: "18px" }}>
+      {pendingOrders.length > 0 && (
+        <Card style={{ padding: "18px" }}>
+          <p style={{ margin: "0 0 12px", fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
+            Awaiting approval
+          </p>
+          {pendingOrders.map((order) => (
+            <p key={order.id} style={{ margin: "0 0 6px", fontSize: "13px", color: "#6d5d8a" }}>
+              Request #{order.id} · {formatMoney(order.totalAmount)} — not yet invoiced
+            </p>
+          ))}
+        </Card>
+      )}
+      {localInvoices.map((invoice) => (
+        <Card key={invoice.id} style={{ padding: "18px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "12px" }}>
             <div>
               <p style={{ margin: 0, fontSize: "11px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8" }}>
-                {invoice.isRequest ? "Purchase request" : "Invoice"}
+                {invoice.type} invoice
               </p>
               <p style={{ margin: "4px 0 0", fontSize: "15px", fontWeight: 600, color: "#1a1523" }}>
                 {invoice.invoiceNumber}
               </p>
               <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9d8db8" }}>
-                {formatDate(invoice.date)}
+                Issued {formatDate(invoice.issuedAtUtc)} · Due {formatDate(invoice.dueDateUtc)}
               </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-              <Badge color={invoice.paymentColor}>{invoice.paymentLabel}</Badge>
+              <Badge color={
+                invoice.paymentStatus === "Paid"
+                  ? "green"
+                  : invoice.paymentStatus === "PaymentSubmitted"
+                    ? "blue"
+                    : invoice.isOverdue
+                      ? "red"
+                      : "yellow"
+              }>
+                {invoice.paymentStatus === "Paid"
+                  ? "Paid"
+                  : invoice.paymentStatus === "PaymentSubmitted"
+                    ? "Payment Submitted"
+                    : invoice.isOverdue
+                      ? "Overdue"
+                      : "Unpaid"}
+              </Badge>
               <strong style={{ fontSize: "15px", color: "#1a1523" }}>
-                {formatMoney(invoice.totalAmount)}
+                {formatMoney(invoice.amount)}
               </strong>
             </div>
           </div>
 
-          {invoice.items.length > 0 ? (
+          {invoice.items?.length > 0 ? (
             <div style={{ borderTop: "1px solid var(--purple-50)", paddingTop: "12px", display: "grid", gap: "8px" }}>
               {invoice.items.map((item, index) => (
                 <div
@@ -400,15 +393,90 @@ function InvoicesTab({ invoices }) {
                 </div>
               ))}
             </div>
-          ) : invoice.status === "Approved" ? (
-            <p style={{ margin: 0, fontSize: "12.5px", color: "#7c6f96" }}>
-              Part line details are recorded in your purchase history.
-            </p>
           ) : null}
+          {invoice.paymentStatementUrl && (
+            <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#6d5d8a" }}>
+              Payment statement:
+              {" "}
+              <a
+                href={`${fileBaseUrl}${invoice.paymentStatementUrl}`}
+                download={invoice.paymentStatementFileName || "payment-statement"}
+                style={{ color: "var(--purple-600)", textDecoration: "none" }}
+              >
+                {invoice.paymentStatementFileName || "View attachment"}
+              </a>
+            </p>
+          )}
+          {invoice.paymentStatus === "Unpaid" && (
+            <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--purple-50)", display: "grid", gap: "10px" }}>
+              <p style={{ margin: 0, fontSize: "12.5px", color: "#6d5d8a" }}>
+                Attach your payment statement and submit it for staff approval.
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={(e) => setSelectedFiles((current) => ({
+                  ...current,
+                  [invoice.id]: e.target.files?.[0] || null,
+                }))}
+                style={{ fontSize: "12.5px", color: "#4c3d6b" }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const file = selectedFiles[invoice.id];
+                    if (!file) {
+                      toast.error("Please attach a payment statement first.");
+                      return;
+                    }
 
-          {invoice.status === "Pending" && (
-            <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#9d8db8" }}>
-              Payment is collected after staff approves your request.
+                    const formData = new FormData();
+                    formData.append("paymentStatement", file);
+
+                    setSubmittingInvoiceId(invoice.id);
+                    try {
+                      const result = await customerInvoiceApi.submitPayment(invoice.id, formData);
+                      setLocalInvoices((current) => current.map((entry) => (
+                        entry.id === invoice.id ? result.invoice : entry
+                      )));
+                      toast.success(result.message || "Payment submitted for review.");
+                    } catch (e) {
+                      toast.error(e.message || "Could not submit payment statement.");
+                    } finally {
+                      setSubmittingInvoiceId(null);
+                    }
+                  }}
+                  disabled={submittingInvoiceId === invoice.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "var(--purple-600)",
+                    color: "white",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    cursor: submittingInvoiceId === invoice.id ? "not-allowed" : "pointer",
+                    opacity: submittingInvoiceId === invoice.id ? 0.6 : 1,
+                  }}
+                >
+                  {submittingInvoiceId === invoice.id ? "Submitting..." : "Attach statement and mark paid"}
+                </button>
+              </div>
+            </div>
+          )}
+          {invoice.paymentStatus === "PaymentSubmitted" && (
+            <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#1d4ed8" }}>
+              Payment statement submitted{invoice.paymentSubmittedAtUtc ? ` on ${formatDate(invoice.paymentSubmittedAtUtc)}` : ""}. Waiting for staff confirmation.
+            </p>
+          )}
+          {invoice.paymentStatus !== "Paid" && invoice.isOverdue && (
+            <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#b45309" }}>
+              This balance is overdue. Please contact us to arrange payment.
             </p>
           )}
         </Card>

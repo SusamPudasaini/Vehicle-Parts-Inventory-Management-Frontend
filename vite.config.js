@@ -11,6 +11,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/payment-statements": {
+        target: "https://localhost:7041",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

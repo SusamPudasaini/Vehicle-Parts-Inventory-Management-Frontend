@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Plus, User } from "lucide-react";
+import { AlertTriangle, Plus, User } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -79,6 +79,7 @@ export default function CustomerDashboard() {
   const [profile, setProfile] = useState(null);
   const [serviceHistory, setServiceHistory] = useState([]);
   const [purchaseHistory, setPurchaseHistory] = useState([]);
+  const [unpaidSummary, setUnpaidSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const isLoginError = (error) => /log\s?in|logged\s?in/i.test(error?.message || "");
@@ -93,16 +94,18 @@ export default function CustomerDashboard() {
 
     async function loadDashboard() {
       try {
-        const [profileData, serviceData, purchaseData] = await Promise.all([
+        const [profileData, serviceData, purchaseData, unpaidData] = await Promise.all([
           customerProfileApi.getProfile(),
           customerProfileApi.getServiceHistory().catch(() => []),
           customerProfileApi.getPurchaseHistory().catch(() => []),
+          customerProfileApi.getUnpaidInvoices().catch(() => null),
         ]);
 
         if (!alive) return;
         setProfile(profileData);
         setServiceHistory(Array.isArray(serviceData) ? serviceData : []);
         setPurchaseHistory(Array.isArray(purchaseData) ? purchaseData : []);
+        setUnpaidSummary(unpaidData);
 
         if (profileData && (!user?.fullName || user.fullName !== profileData.fullName)) {
           login({ ...user, ...profileData, role: "Customer" });
@@ -134,10 +137,37 @@ export default function CustomerDashboard() {
         action={
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <Button variant="secondary" onClick={() => goTo("/customer/history")}>View history</Button>
+            <Button variant="secondary" onClick={() => goTo("/customer/reviews")}>Leave a review</Button>
             <Button onClick={() => goTo("/customer/appointments")}>Book appointment</Button>
           </div>
         }
       />
+
+      {unpaidSummary && unpaidSummary.unpaidCount > 0 && (
+        <Card style={{
+          padding: "16px 18px",
+          border: "1px solid #fcd34d",
+          background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
+            <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <div style={{ flex: 1, minWidth: "200px" }}>
+              <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#92400e" }}>
+                You have {unpaidSummary.unpaidCount} outstanding invoice{unpaidSummary.unpaidCount === 1 ? "" : "s"}
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#a16207" }}>
+                Outstanding balance: Rs. {Number(unpaidSummary.totalOutstanding).toLocaleString()}
+                {unpaidSummary.overdueCount > 0 && (
+                  <> · {unpaidSummary.overdueCount} overdue (please pay promptly)</>
+                )}
+              </p>
+            </div>
+            <Button onClick={() => goTo("/customer/history?tab=invoices")} style={{ flexShrink: 0 }}>
+              View invoices
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <motion.section
         initial={{ opacity: 0, y: 10 }}
@@ -148,6 +178,12 @@ export default function CustomerDashboard() {
         <StatCard label="Vehicles" value={vehicles.length} hint="Registered to your profile" onClick={() => goTo("/customer/vehicles")} />
         <StatCard label="Services" value={serviceHistory.length} hint="View service history" onClick={() => goTo("/customer/history?tab=services")} />
         <StatCard label="Purchases" value={purchaseHistory.length} hint="View previous purchases" onClick={() => goTo("/customer/history?tab=purchases")} />
+        <StatCard
+          label="Outstanding"
+          value={unpaidSummary?.unpaidCount ?? 0}
+          hint="Invoices awaiting payment clearance"
+          onClick={() => goTo("/customer/history?tab=invoices")}
+        />
       </motion.section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>

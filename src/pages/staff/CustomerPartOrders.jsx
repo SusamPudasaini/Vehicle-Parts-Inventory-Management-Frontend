@@ -60,7 +60,7 @@ export default function CustomerPartOrders() {
     try {
       if (modalMode === "approve") {
         await customerPartOrdersApi.approve(activeOrder.id, staffNotes.trim() || null);
-        toast.success(`Order #${activeOrder.id} approved and invoice emailed.`);
+        toast.success(`Order #${activeOrder.id} approved — unpaid invoice emailed to customer.`);
       } else {
         await customerPartOrdersApi.reject(activeOrder.id, staffNotes.trim() || null);
         toast.success(`Order #${activeOrder.id} rejected.`);

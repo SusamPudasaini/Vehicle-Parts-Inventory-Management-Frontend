@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { CalendarClock, CheckCircle2, XCircle } from "lucide-react";
-import { appointmentApi } from "../../services/api";
+import { appointmentApi, customerInvoiceApi } from "../../services/api";
 import { Badge, Button, Card, Input, Modal, PageHeader, Select, Spinner, Table, TD, TR } from "../../components/ui";
 
 const STATUS_LABELS = {
@@ -31,6 +31,8 @@ export default function Appointments() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [rescheduleModal, setRescheduleModal] = useState({ open: false, appointmentId: null });
+  const [completeModal, setCompleteModal] = useState({ open: false, appointment: null });
+  const [completeForm, setCompleteForm] = useState({ amount: "", staffNotes: "" });
   const [rescheduleForm, setRescheduleForm] = useState({ date: "", time: "" });
   const [saving, setSaving] = useState(false);
 
@@ -58,6 +60,13 @@ export default function Appointments() {
   }, [appointments, filter]);
 
   const handleStatus = async (appointmentId, status) => {
+    if (status === 2) {
+      const appt = appointments.find((a) => a.appointmentId === appointmentId);
+      setCompleteForm({ amount: "", staffNotes: "" });
+      setCompleteModal({ open: true, appointment: appt });
+      return;
+    }
+
     setSaving(true);
     try {
       await appointmentApi.updateStatus(appointmentId, status);
@@ -65,6 +74,29 @@ export default function Appointments() {
       await loadAppointments();
     } catch (e) {
       toast.error(e.message || "Failed to update appointment.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompleteWithInvoice = async () => {
+    const amount = Number(completeForm.amount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter a valid service amount.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await customerInvoiceApi.completeService(completeModal.appointment.appointmentId, {
+        amount,
+        staffNotes: completeForm.staffNotes.trim() || null,
+      });
+      toast.success("Service completed and invoice emailed.");
+      setCompleteModal({ open: false, appointment: null });
+      await loadAppointments();
+    } catch (e) {
+      toast.error(e.message || "Failed to complete service.");
     } finally {
       setSaving(false);
     }
@@ -217,6 +249,46 @@ export default function Appointments() {
           )}
         </Table>
       </Card>
+
+      <Modal
+        open={completeModal.open}
+        onClose={() => setCompleteModal({ open: false, appointment: null })}
+        title="Complete service & send invoice"
+      >
+        {completeModal.appointment && (
+          <div style={{ display: "grid", gap: "12px" }}>
+            <p style={{ margin: 0, fontSize: "13px", color: "#6d5d8a" }}>
+              {completeModal.appointment.serviceType} for {completeModal.appointment.customerName}
+            </p>
+            <Input
+              label="Service charge (Rs.)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={completeForm.amount}
+              onChange={(e) => setCompleteForm((s) => ({ ...s, amount: e.target.value }))}
+            />
+            <div>
+              <label style={{ fontSize: "12.5px", fontWeight: 500, color: "#4c3d6b", display: "block", marginBottom: "6px" }}>
+                Notes (optional)
+              </label>
+              <textarea
+                value={completeForm.staffNotes}
+                onChange={(e) => setCompleteForm((s) => ({ ...s, staffNotes: e.target.value }))}
+                style={{ width: "100%", minHeight: "72px", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", fontFamily: "inherit" }}
+              />
+            </div>
+          </div>
+        )}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
+          <Button variant="secondary" onClick={() => setCompleteModal({ open: false, appointment: null })}>
+            Cancel
+          </Button>
+          <Button onClick={handleCompleteWithInvoice} disabled={saving}>
+            {saving ? "Sending…" : "Complete & email invoice"}
+          </Button>
+        </div>
+      </Modal>
 
       <Modal
         open={rescheduleModal.open}

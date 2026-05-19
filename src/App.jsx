@@ -13,6 +13,7 @@ import CustomerAppointments from "./pages/customer/CustomerAppointments";
 import CustomerParts from "./pages/customer/CustomerParts";
 import CustomerPartRequests from "./pages/customer/CustomerPartRequests";
 import CustomerHistory from "./pages/customer/CustomerHistory";
+import CustomerReviews from "./pages/customer/CustomerReviews";
 import StaffManagement from "./pages/admin/StaffManagement";
 import VendorManagement from "./pages/admin/VendorManagement";
 import PartsManagement from "./pages/admin/PartsManagement";
@@ -27,6 +28,9 @@ import CustomerPartOrders from "./pages/staff/CustomerPartOrders";
 import PartRequests from "./pages/staff/PartRequests";
 import RequestPart from "./pages/staff/RequestPart";
 import ReviewService from "./pages/staff/ReviewService";
+import ServiceReviews from "./pages/staff/ServiceReviews";
+import CustomerInvoices from "./pages/staff/CustomerInvoices";
+import CustomerReports from "./pages/staff/CustomerReports";
 
 function StaffRoute({ children }) {
   const { user } = useAuth();
@@ -78,6 +82,7 @@ function AppRoutes() {
         <Route path="parts" element={<CustomerParts />} />
         <Route path="part-requests" element={<CustomerPartRequests />} />
         <Route path="history" element={<CustomerHistory />} />
+        <Route path="reviews" element={<CustomerReviews />} />
       </Route>
 
       <Route path="/" element={<StaffRoute><Layout /></StaffRoute>}>
@@ -104,6 +109,9 @@ function AppRoutes() {
         <Route path="staff/customers/:id/request-part" element={<RequestPart />} />
         <Route path="staff/customers/:id/review-service" element={<ReviewService />} />
         <Route path="staff/search" element={<SearchCustomers />} />
+        <Route path="staff/reviews" element={<ServiceReviews />} />
+        <Route path="staff/invoices" element={<CustomerInvoices />} />
+        <Route path="staff/customer-reports" element={<CustomerReports />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
