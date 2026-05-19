@@ -150,6 +150,12 @@ export default function CustomerLogin() {
         </div>
 
         <p style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "rgba(255,255,255,0.35)" }}>
+          New customer?{" "}
+          <Link to="/customer-register" style={{ color: "white", fontWeight: 600, textDecoration: "none" }}>
+            Create an account
+          </Link>
+        </p>
+        <p style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: "rgba(255,255,255,0.35)" }}>
           Staff or admin?{" "}
           <Link to="/login" style={{ color: "white", fontWeight: 600, textDecoration: "none" }}>
             Sign in here

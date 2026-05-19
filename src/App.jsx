@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import CustomerLogin from "./pages/CustomerLogin";
+import CustomerRegister from "./pages/CustomerRegister";
 import CustomerVerifyEmail from "./pages/CustomerVerifyEmail";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import StaffManagement from "./pages/admin/StaffManagement";
@@ -54,6 +55,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/customer-login" element={<PublicRoute><CustomerLogin /></PublicRoute>} />
+      <Route path="/customer-register" element={<PublicRoute><CustomerRegister /></PublicRoute>} />
       <Route path="/customer/verify-email" element={<CustomerVerifyEmail />} />
       <Route path="/verify-email/staff" element={<CustomerVerifyEmail type="staff" />} />
       <Route path="/customer/dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
