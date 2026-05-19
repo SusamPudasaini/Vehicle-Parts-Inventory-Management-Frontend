@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { appointmentApi } from "../../services/api";
-import { PageHeader, Button, Input, Card, Alert } from "../../components/ui";
+import { PageHeader, Button, Input, Card } from "../../components/ui";
 
 export default function BookAppointment() {
   const { id: customerId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [form, setForm] = useState({ date: "", time: "", serviceType: "", notes: "" });
 
   const setField = (k) => (e) => setForm((s) => ({ ...s, [k]: e.target.value }));
@@ -21,13 +21,19 @@ export default function BookAppointment() {
 
   const handleSubmit = async () => {
     const err = validate();
-    if (err) { setError(err); return; }
-    setLoading(true); setError("");
+    if (err) { toast.error(err); return; }
+    setLoading(true);
     try {
-      await appointmentApi.create(customerId, { date: form.date, time: form.time, serviceType: form.serviceType, notes: form.notes });
+      await appointmentApi.create({
+        customerId: Number(customerId),
+        appointmentDateTime: `${form.date}T${form.time}`,
+        serviceType: form.serviceType,
+        notes: form.notes,
+      });
+      toast.success("Appointment booked successfully.");
       navigate(`/staff/customers/${customerId}`);
     } catch (e) {
-      setError(e.message);
+      toast.error(e.message || "Failed to book appointment.");
     } finally {
       setLoading(false);
     }
@@ -38,8 +44,6 @@ export default function BookAppointment() {
       <PageHeader title="Book Appointment" subtitle="Schedule an appointment for the customer" />
 
       <div style={{ maxWidth: "620px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <Alert message={error} />
-
         <Card style={{ padding: "18px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <Input label="Date" type="date" value={form.date} onChange={setField("date")} />

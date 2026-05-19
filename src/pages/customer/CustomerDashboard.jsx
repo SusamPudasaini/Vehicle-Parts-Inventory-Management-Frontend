@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogOut, Pencil, Plus, User } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Plus, User } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import { customerProfileApi } from "../../services/api";
-import { Badge, Button, Card, Input, Modal, Spinner } from "../../components/ui";
-import BrandLogo from "../../components/BrandLogo";
+import { Badge, Button, Card, PageHeader, Spinner } from "../../components/ui";
 
 function StatCard({ label, value, hint }) {
   return (
@@ -31,7 +30,7 @@ function InfoLine({ label, value }) {
   );
 }
 
-function VehicleItem({ vehicle, onEdit }) {
+function VehicleItem({ vehicle }) {
   return (
     <div style={{
       border: "1px solid var(--purple-100)",
@@ -48,61 +47,26 @@ function VehicleItem({ vehicle, onEdit }) {
             {vehicle.year || "Year not set"}{vehicle.color ? ` - ${vehicle.color}` : ""}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Badge color="purple">{vehicle.vehicleNumber || "No plate"}</Badge>
-          <button
-            onClick={() => onEdit?.(vehicle)}
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "8px",
-              border: "1px solid var(--purple-100)",
-              background: "white",
-              color: "var(--purple-600)",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            title="Edit vehicle"
-          >
-            <Pencil size={14} strokeWidth={2.2} />
-          </button>
-        </div>
+        <Badge color="purple">{vehicle.vehicleNumber || "No plate"}</Badge>
       </div>
     </div>
   );
 }
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-const emptyProfile = {
-  fullName: "",
-  phone: "",
-  address: "",
-};
-
-const emptyVehicle = {
-  vehicleNumber: "",
-  make: "",
-  model: "",
-  year: CURRENT_YEAR,
-  color: "",
-};
-
 export default function CustomerDashboard() {
-  const { user, login, logout } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [serviceHistory, setServiceHistory] = useState([]);
   const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState(emptyProfile);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [vehicleForm, setVehicleForm] = useState(emptyVehicle);
-  const [vehicleModal, setVehicleModal] = useState({ open: false, mode: "add", vehicleId: null });
-  const [savingVehicle, setSavingVehicle] = useState(false);
+
+  const isLoginError = (error) => /log\s?in|logged\s?in/i.test(error?.message || "");
+
+  if (!user) return <Navigate to="/customer-login" replace />;
+  if (user.role !== "Customer") {
+    return <Navigate to={user.role === "Admin" ? "/admin/staff" : "/staff/customers"} replace />;
+  }
 
   useEffect(() => {
     let alive = true;
@@ -125,6 +89,7 @@ export default function CustomerDashboard() {
         }
       } catch (e) {
         if (!alive) return;
+        if (user?.role === "Customer" && isLoginError(e)) return;
         toast.error(e.message || "Could not load your dashboard details.");
       } finally {
         if (alive) setLoading(false);
@@ -135,344 +100,80 @@ export default function CustomerDashboard() {
     return () => { alive = false; };
   }, []);
 
-  const refreshProfile = async () => {
-    try {
-      const profileData = await customerProfileApi.getProfile();
-      setProfile(profileData);
-
-      if (profileData && (!user?.fullName || user.fullName !== profileData.fullName)) {
-        login({ ...user, ...profileData, role: "Customer" });
-      }
-    } catch (e) {
-      toast.error(e.message || "Could not refresh your profile details.");
-    }
-  };
-
   const customer = profile || user || {};
   const vehicles = useMemo(() => profile?.vehicles || [], [profile]);
+  const goTo = (path) => navigate(path);
 
-  const handleLogout = async () => {
-    try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/customer-auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // Local logout still clears the portal session if the network request fails.
-    }
-    logout();
-    navigate("/customer-login");
-  };
-
-  const setProfileField = (key) => (e) => setProfileForm((prev) => ({ ...prev, [key]: e.target.value }));
-  const setVehicleField = (key) => (e) => setVehicleForm((prev) => ({ ...prev, [key]: e.target.value }));
-
-  const openProfileEdit = () => {
-    setProfileForm({
-      fullName: customer.fullName || "",
-      phone: customer.phone || "",
-      address: customer.address || "",
-    });
-    setIsProfileOpen(true);
-  };
-
-  const openAddVehicle = () => {
-    setVehicleForm({ ...emptyVehicle });
-    setVehicleModal({ open: true, mode: "add", vehicleId: null });
-  };
-
-  const openEditVehicle = (vehicle) => {
-    setVehicleForm({
-      vehicleNumber: vehicle.vehicleNumber || "",
-      make: vehicle.make || "",
-      model: vehicle.model || "",
-      year: vehicle.year || CURRENT_YEAR,
-      color: vehicle.color || "",
-    });
-    setVehicleModal({ open: true, mode: "edit", vehicleId: vehicle.id });
-  };
-
-  const validateProfile = () => {
-    if (!profileForm.fullName.trim()) return "Full name is required.";
-    if (!profileForm.phone.trim()) return "Phone number is required.";
-    if (!/^\d{10,15}$/.test(profileForm.phone.trim())) return "Phone must be 10 to 15 digits.";
-    return null;
-  };
-
-  const handleProfileSave = async () => {
-    const err = validateProfile();
-    if (err) {
-      toast.error(err);
-      return;
-    }
-
-    setSavingProfile(true);
-    try {
-      const data = await customerProfileApi.updateProfile({
-        fullName: profileForm.fullName,
-        phone: profileForm.phone,
-        address: profileForm.address,
-      });
-      toast.success(data?.message || "Profile updated successfully.");
-      setIsProfileOpen(false);
-      await refreshProfile();
-    } catch (e) {
-      toast.error(e.message || "Failed to update profile.");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const validateVehicle = () => {
-    if (!vehicleForm.vehicleNumber.trim()) return "Vehicle number is required.";
-    if (!vehicleForm.make.trim()) return "Make is required.";
-    if (!vehicleForm.model.trim()) return "Model is required.";
-    const yearValue = Number(vehicleForm.year);
-    if (!yearValue || yearValue < 1886 || yearValue > 2100) return "Enter a valid vehicle year.";
-    return null;
-  };
-
-  const handleVehicleSave = async () => {
-    const err = validateVehicle();
-    if (err) {
-      toast.error(err);
-      return;
-    }
-
-    setSavingVehicle(true);
-    try {
-      const payload = {
-        vehicleNumber: vehicleForm.vehicleNumber,
-        make: vehicleForm.make,
-        model: vehicleForm.model,
-        year: Number(vehicleForm.year),
-        color: vehicleForm.color,
-      };
-
-      const data = vehicleModal.mode === "edit"
-        ? await customerProfileApi.updateVehicle(vehicleModal.vehicleId, payload)
-        : await customerProfileApi.addVehicle(payload);
-
-      toast.success(data?.message || "Vehicle saved successfully.");
-      setVehicleModal({ open: false, mode: "add", vehicleId: null });
-      await refreshProfile();
-    } catch (e) {
-      toast.error(e.message || "Failed to save vehicle.");
-    } finally {
-      setSavingVehicle(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Spinner />
-      </div>
-    );
-  }
+  if (loading) return <Spinner />;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
-      <header style={{
-        background: "var(--purple-950)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-      }}>
-        <div style={{
-          maxWidth: "960px",
-          margin: "0 auto",
-          padding: "18px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <BrandLogo size={34} subtitle="Customer Portal" />
+    <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+      <PageHeader
+        title={`Welcome, ${customer.fullName || "Customer"}`}
+        subtitle="Your vehicles, service activity, and purchase history in one place."
+        action={
+          <Button onClick={() => goTo("/customer/appointments")}>Book appointment</Button>
+        }
+      />
+
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.26, ease: "easeOut" }}
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}
+      >
+        <StatCard label="Vehicles" value={vehicles.length} hint="Registered to your profile" />
+        <StatCard label="Services" value={serviceHistory.length} hint="Completed service records" />
+        <StatCard label="Purchases" value={purchaseHistory.length} hint="Recorded part purchases" />
+      </motion.section>
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
+        <Card style={{ padding: "18px", alignSelf: "start" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+            <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: 0 }}>
+              Profile
+            </p>
+            <Button variant="secondary" onClick={() => goTo("/customer/profile")} style={{ padding: "6px 10px", fontSize: "12px" }}>
+              <User size={14} strokeWidth={2.2} />
+              Manage
+            </Button>
           </div>
-          <Button variant="ghost" onClick={handleLogout} style={{ color: "rgba(255,255,255,0.75)" }}>
-            <LogOut size={14} strokeWidth={2.2} />
-            Sign out
-          </Button>
-        </div>
-      </header>
+          <InfoLine label="Email" value={customer.email} />
+          <InfoLine label="Phone" value={customer.phone} />
+          <InfoLine label="Address" value={customer.address} />
+          <InfoLine
+            label="Customer since"
+            value={customer.registeredAt ? new Date(customer.registeredAt).toLocaleDateString() : ""}
+          />
+        </Card>
 
-      <main style={{ maxWidth: "960px", margin: "0 auto", padding: "36px 24px 48px" }}>
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.26, ease: "easeOut" }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", marginBottom: "28px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{
-              width: "56px",
-              height: "56px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--purple-600), var(--accent))",
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "22px",
-              fontWeight: 700,
-              flexShrink: 0,
-            }}>
-              {customer.fullName?.charAt(0).toUpperCase() || "C"}
-            </div>
-            <div>
-              <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1a1523", margin: "0 0 4px" }}>
-                Welcome, {customer.fullName || "Customer"}
-              </h1>
-              <p style={{ fontSize: "13.5px", color: "#7c6f96", margin: 0 }}>
-                Your vehicles, service activity, and purchase history in one place.
-              </p>
-            </div>
-          </div>
-        </motion.section>
-
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px", marginBottom: "18px" }}>
-          <StatCard label="Vehicles" value={vehicles.length} hint="Registered to your profile" />
-          <StatCard label="Services" value={serviceHistory.length} hint="Completed service records" />
-          <StatCard label="Purchases" value={purchaseHistory.length} hint="Recorded part purchases" />
-        </section>
-
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
-          <Card style={{ padding: "18px", alignSelf: "start" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+        <Card style={{ padding: "18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: 0 }}>
-                Profile
+                Vehicles
               </p>
-              <Button variant="secondary" onClick={openProfileEdit} style={{ padding: "6px 10px", fontSize: "12px" }}>
-                <User size={14} strokeWidth={2.2} />
-                Edit
-              </Button>
+              <Badge color="purple">{vehicles.length}</Badge>
             </div>
-            <InfoLine label="Email" value={customer.email} />
-            <InfoLine label="Phone" value={customer.phone} />
-            <InfoLine label="Address" value={customer.address} />
-            <InfoLine
-              label="Customer since"
-              value={customer.registeredAt ? new Date(customer.registeredAt).toLocaleDateString() : ""}
-            />
-          </Card>
+            <Button onClick={() => goTo("/customer/vehicles")} style={{ padding: "6px 10px", fontSize: "12px" }}>
+              <Plus size={14} strokeWidth={2.2} />
+              Manage
+            </Button>
+          </div>
 
-          <Card style={{ padding: "18px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <p style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.07em", textTransform: "uppercase", color: "#9d8db8", margin: 0 }}>
-                  Vehicles
-                </p>
-                <Badge color="purple">{vehicles.length}</Badge>
-              </div>
-              <Button onClick={openAddVehicle} style={{ padding: "6px 10px", fontSize: "12px" }}>
-                <Plus size={14} strokeWidth={2.2} />
-                Add vehicle
-              </Button>
+          {vehicles.length > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
+              {vehicles.slice(0, 4).map((vehicle) => (
+                <VehicleItem key={vehicle.id} vehicle={vehicle} />
+              ))}
             </div>
-
-            {vehicles.length > 0 ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
-                {vehicles.map((vehicle) => (
-                  <VehicleItem key={vehicle.id} vehicle={vehicle} onEdit={openEditVehicle} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: "34px 14px", textAlign: "center", color: "#9d8db8", fontSize: "13px" }}>
-                No vehicles are linked to your profile yet.
-              </div>
-            )}
-          </Card>
-        </section>
-
-        <Modal
-          open={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
-          title="Update profile"
-        >
-          <div style={{ display: "grid", gap: "12px" }}>
-            <Input
-              label="Full name"
-              placeholder="Your full name"
-              value={profileForm.fullName}
-              onChange={setProfileField("fullName")}
-            />
-            <Input
-              label="Phone"
-              placeholder="98XXXXXXXX"
-              value={profileForm.phone}
-              onChange={setProfileField("phone")}
-            />
-            <Input
-              label="Address"
-              placeholder="Street, City"
-              value={profileForm.address}
-              onChange={setProfileField("address")}
-            />
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
-            <Button variant="secondary" onClick={() => setIsProfileOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleProfileSave} disabled={savingProfile}>
-              {savingProfile ? "Saving..." : "Save changes"}
-            </Button>
-          </div>
-        </Modal>
-
-        <Modal
-          open={vehicleModal.open}
-          onClose={() => setVehicleModal({ open: false, mode: "add", vehicleId: null })}
-          title={vehicleModal.mode === "edit" ? "Update vehicle" : "Add vehicle"}
-        >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Input
-                label="Vehicle / Plate number"
-                placeholder="e.g. BA 1 CHA 1234"
-                value={vehicleForm.vehicleNumber}
-                onChange={setVehicleField("vehicleNumber")}
-              />
+          ) : (
+            <div style={{ padding: "34px 14px", textAlign: "center", color: "#9d8db8", fontSize: "13px" }}>
+              No vehicles are linked to your profile yet.
             </div>
-            <Input
-              label="Make"
-              placeholder="e.g. Toyota"
-              value={vehicleForm.make}
-              onChange={setVehicleField("make")}
-            />
-            <Input
-              label="Model"
-              placeholder="e.g. Corolla"
-              value={vehicleForm.model}
-              onChange={setVehicleField("model")}
-            />
-            <Input
-              label="Year"
-              type="number"
-              min="1886"
-              max="2100"
-              value={vehicleForm.year}
-              onChange={setVehicleField("year")}
-            />
-            <Input
-              label="Color"
-              placeholder="e.g. White"
-              value={vehicleForm.color}
-              onChange={setVehicleField("color")}
-            />
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "18px" }}>
-            <Button
-              variant="secondary"
-              onClick={() => setVehicleModal({ open: false, mode: "add", vehicleId: null })}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleVehicleSave} disabled={savingVehicle}>
-              {savingVehicle ? "Saving..." : vehicleModal.mode === "edit" ? "Update vehicle" : "Add vehicle"}
-            </Button>
-          </div>
-        </Modal>
-      </main>
+          )}
+        </Card>
+      </section>
     </div>
   );
 }

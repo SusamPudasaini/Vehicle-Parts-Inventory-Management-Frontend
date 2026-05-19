@@ -18,6 +18,21 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const msg = data?.message || `Request failed with status ${res.status}`;
+    const storedUser = sessionStorage.getItem("vp_user");
+    const role = storedUser ? (() => {
+      try {
+        return JSON.parse(storedUser)?.role;
+      } catch {
+        return null;
+      }
+    })() : null;
+
+    const isAuthError = (res.status === 401 || res.status === 403) && /log\s?in|logged\s?in/i.test(msg);
+
+    if (role && role !== "Customer" && isAuthError) {
+      return null;
+    }
+
     throw new Error(msg);
   }
 
@@ -52,8 +67,8 @@ export const customerApi = {
 
 // ── Appointments / Requests / Reviews ─────────────────────────────────────────
 export const appointmentApi = {
-  getAll: (customerId) => request(`/customer/${customerId}/appointments`),
-  create: (customerId, data) => request(`/customer/${customerId}/appointments`, { method: "POST", body: JSON.stringify(data) }),
+  getByCustomer: (customerId) => request(`/appointments/customer/${customerId}`),
+  create: (data) => request("/appointments", { method: "POST", body: JSON.stringify(data) }),
 };
 
 export const partRequestApi = {
