@@ -69,6 +69,21 @@ export const customerApi = {
 export const appointmentApi = {
   getByCustomer: (customerId) => request(`/appointments/customer/${customerId}`),
   create: (data) => request("/appointments", { method: "POST", body: JSON.stringify(data) }),
+  getAll: () => request("/appointments"),
+  updateStatus: (id, status) => request(`/appointments/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  reschedule: (id, appointmentDateTime) => request(`/appointments/${id}/schedule`, { method: "PUT", body: JSON.stringify({ appointmentDateTime }) }),
+};
+
+export const customerPartsApi = {
+  getCatalog: () => request("/customer-parts"),
+  getOrders: () => request("/customer-parts/orders"),
+  checkout: (items) => request("/customer-parts/checkout", { method: "POST", body: JSON.stringify({ items }) }),
+};
+
+export const customerPartOrdersApi = {
+  getAll: () => request("/customer-part-orders"),
+  approve: (id, staffNotes) => request(`/customer-part-orders/${id}/approve`, { method: "PUT", body: JSON.stringify({ staffNotes }) }),
+  reject: (id, staffNotes) => request(`/customer-part-orders/${id}/reject`, { method: "PUT", body: JSON.stringify({ staffNotes }) }),
 };
 
 export const partRequestApi = {

@@ -15,6 +15,20 @@ const SERVICE_OPTIONS = [
   "Other",
 ];
 
+const STATUS_LABELS = {
+  0: "Pending",
+  1: "Confirmed",
+  2: "Completed",
+  3: "Cancelled",
+};
+
+const STATUS_COLORS = {
+  0: "yellow",
+  1: "green",
+  2: "blue",
+  3: "red",
+};
+
 export default function CustomerAppointments() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -33,6 +47,8 @@ export default function CustomerAppointments() {
   });
 
   const setField = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const today = new Date();
+  const minDate = today.toISOString().slice(0, 10);
 
   const isLoginError = (error) => /log\s?in|logged\s?in/i.test(error?.message || "");
 
@@ -57,7 +73,11 @@ export default function CustomerAppointments() {
         }
       } catch (e) {
         if (!alive) return;
-        if (user?.role === "Customer" && isLoginError(e)) return;
+        if (user?.role === "Customer" && isLoginError(e)) {
+          setProfile((prev) => prev || user);
+          setVehicles([]);
+          return;
+        }
         toast.error(e.message || "Failed to load appointments.");
       } finally {
         if (alive) setLoading(false);
@@ -79,6 +99,9 @@ export default function CustomerAppointments() {
     if (!serviceTypeValue) return "Please select a service type.";
     if (!form.date) return "Please select a date.";
     if (!form.time) return "Please select a time.";
+    const selected = new Date(`${form.date}T${form.time}`);
+    if (Number.isNaN(selected.getTime())) return "Please enter a valid date and time.";
+    if (selected < new Date()) return "Appointment date/time cannot be in the past.";
     return null;
   };
 
@@ -92,7 +115,8 @@ export default function CustomerAppointments() {
   };
 
   const handleConfirm = async () => {
-    if (!profile?.id) {
+    const customerId = profile?.id || user?.id;
+    if (!customerId) {
       toast.error("Please log in to book an appointment.");
       return;
     }
@@ -100,19 +124,19 @@ export default function CustomerAppointments() {
     setSaving(true);
     try {
       const payload = {
-        customerId: profile.id,
+        customerId,
         vehicleId: form.vehicleId ? Number(form.vehicleId) : null,
         appointmentDateTime: `${form.date}T${form.time}`,
         serviceType: serviceTypeValue,
         notes: form.notes.trim() || null,
       };
 
-      const res = await appointmentApi.create(payload);
+      await appointmentApi.create(payload);
       toast.success("Appointment booked successfully.");
       setStep("success");
       setForm({ serviceType: "", customServiceType: "", date: "", time: "", vehicleId: "", notes: "" });
 
-      const list = await appointmentApi.getByCustomer(profile.id);
+      const list = await appointmentApi.getByCustomer(customerId);
       setAppointments(Array.isArray(list) ? list : []);
     } catch (e) {
       toast.error(e.message || "Failed to book appointment.");
@@ -153,14 +177,14 @@ export default function CustomerAppointments() {
                 />
               </div>
             )}
-            <Input label="Date" type="date" value={form.date} onChange={setField("date")} />
+            <Input label="Date" type="date" min={minDate} value={form.date} onChange={setField("date")} />
             <Input label="Time" type="time" value={form.time} onChange={setField("time")} />
             <div style={{ gridColumn: "1 / -1" }}>
               <Select label="Vehicle (optional)" value={form.vehicleId} onChange={setField("vehicleId")}>
                 <option value="">No vehicle selected</option>
                 {vehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.vehicleNumber} Â· {vehicle.make} {vehicle.model}
+                    {vehicle.vehicleNumber} · {vehicle.make} {vehicle.model}
                   </option>
                 ))}
               </Select>
@@ -196,13 +220,13 @@ export default function CustomerAppointments() {
               Please confirm your booking details.
             </p>
             <div style={{ display: "grid", gap: "8px" }}>
-              <InfoRow label="Service" value={serviceTypeValue || "â€”"} />
+              <InfoRow label="Service" value={serviceTypeValue || "-"} />
               <InfoRow label="Date" value={form.date} />
               <InfoRow label="Time" value={form.time} />
               <InfoRow
                 label="Vehicle"
                 value={selectedVehicle
-                  ? `${selectedVehicle.vehicleNumber} Â· ${selectedVehicle.make} ${selectedVehicle.model}`
+                  ? `${selectedVehicle.vehicleNumber} · ${selectedVehicle.make} ${selectedVehicle.model}`
                   : "Not selected"}
               />
               <InfoRow label="Notes" value={form.notes || "None"} />
@@ -251,9 +275,14 @@ export default function CustomerAppointments() {
                 display: "grid",
                 gap: "6px",
               }}>
-                <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#1a1523", margin: 0 }}>
-                  {appt.serviceType}
-                </p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#1a1523", margin: 0 }}>
+                    {appt.serviceType}
+                  </p>
+                  <Badge color={STATUS_COLORS[appt.status] || "gray"}>
+                    {STATUS_LABELS[appt.status] || "Unknown"}
+                  </Badge>
+                </div>
                 <p style={{ fontSize: "12.5px", color: "#7c6f96", margin: 0 }}>
                   {appt.appointmentDateTime
                     ? new Date(appt.appointmentDateTime).toLocaleString()

@@ -10,6 +10,7 @@ import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerProfile from "./pages/customer/CustomerProfile";
 import CustomerVehicles from "./pages/customer/CustomerVehicles";
 import CustomerAppointments from "./pages/customer/CustomerAppointments";
+import CustomerParts from "./pages/customer/CustomerParts";
 import StaffManagement from "./pages/admin/StaffManagement";
 import VendorManagement from "./pages/admin/VendorManagement";
 import PartsManagement from "./pages/admin/PartsManagement";
@@ -18,7 +19,9 @@ import FinancialReports from "./pages/admin/FinancialReports";
 import RegisterCustomer from "./pages/staff/RegisterCustomer";
 import CustomerList, { SearchCustomers } from "./pages/staff/CustomerList";
 import CustomerDetail from "./pages/staff/CustomerDetail";
+import Appointments from "./pages/staff/Appointments";
 import BookAppointment from "./pages/staff/BookAppointment";
+import CustomerPartOrders from "./pages/staff/CustomerPartOrders";
 import RequestPart from "./pages/staff/RequestPart";
 import ReviewService from "./pages/staff/ReviewService";
 
@@ -69,6 +72,7 @@ function AppRoutes() {
         <Route path="profile" element={<CustomerProfile />} />
         <Route path="vehicles" element={<CustomerVehicles />} />
         <Route path="appointments" element={<CustomerAppointments />} />
+        <Route path="parts" element={<CustomerParts />} />
       </Route>
 
       <Route path="/" element={<StaffRoute><Layout /></StaffRoute>}>
@@ -87,6 +91,8 @@ function AppRoutes() {
         <Route path="staff/register-customer" element={<RegisterCustomer />} />
         <Route path="staff/customers" element={<CustomerList />} />
         <Route path="staff/customers/:id" element={<CustomerDetail />} />
+        <Route path="staff/appointments" element={<Appointments />} />
+        <Route path="staff/part-orders" element={<CustomerPartOrders />} />
         <Route path="staff/customers/:id/book-appointment" element={<BookAppointment />} />
         <Route path="staff/customers/:id/request-part" element={<RequestPart />} />
         <Route path="staff/customers/:id/review-service" element={<ReviewService />} />

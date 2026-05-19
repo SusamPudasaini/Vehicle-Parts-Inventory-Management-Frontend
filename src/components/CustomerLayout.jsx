@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CalendarCheck, Car, Home, LogOut, User } from "lucide-react";
+import { CalendarCheck, Car, Home, LogOut, Package, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import BrandLogo from "./BrandLogo";
 import PageTransition from "./PageTransition";
@@ -9,6 +9,7 @@ const customerLinks = [
   { to: "/customer/profile", label: "Profile", icon: User },
   { to: "/customer/vehicles", label: "Vehicles", icon: Car },
   { to: "/customer/appointments", label: "Appointments", icon: CalendarCheck },
+  { to: "/customer/parts", label: "Purchase Parts", icon: Package },
 ];
 
 export default function CustomerLayout() {
