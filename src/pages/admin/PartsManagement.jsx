@@ -4,19 +4,7 @@ import {
   PageHeader, Button, Badge, Card, Input, Select,
   Modal, EmptyState, Spinner, Alert, Table, TR, TD, ActionButton
 } from "../../components/ui";
-
-const BASE_URL = "https://localhost:7041/api";
-
-async function partsApi(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (res.status === 204) return null;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
-  return data;
-}
+import { partApi, vendorApi } from "../../services/api";
 
 const CATEGORIES = ["Engine", "Brakes", "Suspension", "Electrical", "Body", "Transmission", "Cooling", "Exhaust", "Other"];
 
@@ -106,12 +94,14 @@ export default function PartsManagement() {
     try {
       setLoading(true);
       const [partsData, vendorData] = await Promise.all([
-        partsApi("/part"),
-        partsApi("/vendor"),
+        partApi.getAll(),
+        vendorApi.getAll(),
       ]);
       setParts(partsData);
       setVendors(vendorData);
-    } catch { /* silent */ }
+    } catch (e) {
+      setFormError(e.message || "Failed to load parts.");
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -129,20 +119,20 @@ export default function PartsManagement() {
 
   const handleCreate = async (form) => {
     setFormLoading(true); setFormError("");
-    try { await partsApi("/part", { method: "POST", body: JSON.stringify(form) }); setModal(null); fetchParts(); }
+    try { await partApi.create(form); setModal(null); fetchParts(); }
     catch (e) { setFormError(e.message); }
     finally { setFormLoading(false); }
   };
 
   const handleUpdate = async (form) => {
     setFormLoading(true); setFormError("");
-    try { await partsApi(`/part/${modal.id}`, { method: "PUT", body: JSON.stringify(form) }); setModal(null); fetchParts(); }
+    try { await partApi.update(modal.id, form); setModal(null); fetchParts(); }
     catch (e) { setFormError(e.message); }
     finally { setFormLoading(false); }
   };
 
   const handleDelete = async (id) => {
-    try { await partsApi(`/part/${id}`, { method: "DELETE" }); setDeleteConfirm(null); fetchParts(); }
+    try { await partApi.delete(id); setDeleteConfirm(null); fetchParts(); }
     catch { /* silent */ }
   };
 
@@ -216,6 +206,8 @@ export default function PartsManagement() {
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+
+      {formError && <Alert message={formError} />}
 
       <Card>
         {loading ? <Spinner /> : filtered.length === 0 ? (

@@ -62,6 +62,15 @@ export const vendorApi = {
   delete: (id) => request(`/vendor/${id}`, { method: "DELETE" }),
 };
 
+// ── Parts API  (Feature 3) ─────────────────────────────────────────────────────
+export const partApi = {
+  getAll: () => request("/part"),
+  getById: (id) => request(`/part/${id}`),
+  create: (data) => request("/part", { method: "POST", body: JSON.stringify(data) }),
+  update: (id, data) => request(`/part/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id) => request(`/part/${id}`, { method: "DELETE" }),
+};
+
 // ── Customer API  (Feature 6, 8, 10) ──────────────────────────────────────────
 export const customerApi = {
   getAll: () => request("/customer"),
