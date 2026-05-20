@@ -348,6 +348,11 @@ function InvoicesTab({ invoices, pendingOrders }) {
               <p style={{ margin: "4px 0 0", fontSize: "15px", fontWeight: 600, color: "#1a1523" }}>
                 {invoice.invoiceNumber}
               </p>
+              {invoice.description && (
+                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#7c6f96" }}>
+                  For: {invoice.description}
+                </p>
+              )}
               <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9d8db8" }}>
                 Issued {formatDate(invoice.issuedAtUtc)} · Due {formatDate(invoice.dueDateUtc)}
               </p>
